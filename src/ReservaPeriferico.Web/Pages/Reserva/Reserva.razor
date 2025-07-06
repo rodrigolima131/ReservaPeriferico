@@ -1,0 +1,289 @@
+@page "/reserva"
+@using MudBlazor
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Core.Exceptions
+@inject IPerifericoService PerifericoService
+@inject IUsuarioService UsuarioService
+@inject IReservaService ReservaService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Nova Reserva - Sistema de Reserva</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header da página -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-primary-darken) 100%); color: white;">
+        <MudText Typo="Typo.h4" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-3" />
+            Nova Reserva
+        </MudText>
+        <MudText Typo="Typo.body1" Class="opacity-75">
+            Solicite a reserva de um periférico
+        </MudText>
+    </MudPaper>
+
+    <MudGrid>
+        <!-- Formulário de Reserva -->
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4" Elevation="3">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2" />
+                    Dados da Reserva
+                </MudText>
+                
+                <EditForm Model="reserva" OnSubmit="OnSubmit">
+                    <DataAnnotationsValidator />
+                    <MudStack Spacing="4">
+                        <!-- Seleção de Periférico -->
+                        <MudSelect T="int" Label="Periférico *" @bind-Value="reserva.PerifericoId" Required>
+                            <MudSelectItem Value="0">Selecione um periférico</MudSelectItem>
+                            @foreach (var periferico in perifericosDisponiveis)
+                            {
+                                <MudSelectItem Value="@periferico.Id">
+                                    @periferico.Nome (@periferico.Tipo)
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <!-- Datas -->
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudDatePicker Label="Data de Retirada *" @bind-Date="dataRetirada" Required 
+                                               MinDate="@DateTime.Today" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudDatePicker Label="Data de Devolução *" @bind-Date="dataDevolucao" Required 
+                                               MinDate="@DateTime.Today" />
+                            </MudItem>
+                        </MudGrid>
+
+                        <!-- Observações -->
+                        <MudTextField T="string" Label="Observações" @bind-Value="reserva.Observacoes" 
+                                     Lines="3" Placeholder="Descreva o motivo da reserva e outras informações relevantes..."
+                                     MaxLength="500" />
+
+                        <!-- Botões -->
+                        <MudStack Row="true" Spacing="2">
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" 
+                                       Disabled="@salvando" StartIcon="@Icons.Material.Filled.Check">
+                                @if (salvando)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Salvar Reserva
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                                       OnClick="Cancelar" StartIcon="@Icons.Material.Filled.Close">
+                                Cancelar
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </EditForm>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Painel de Informações -->
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="3">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                    Informações
+                </MudText>
+                
+                <MudStack Spacing="4">
+                    <!-- Status da Reserva -->
+                    <MudStack>
+                        <MudText Typo="Typo.subtitle2">Status da Reserva</MudText>
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">
+                            Pendente - Aguardando aprovação
+                        </MudChip>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <strong>Data da Reserva:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudDivider />
+                    
+                    <!-- Como funciona -->
+                    <MudStack>
+                        <MudText Typo="Typo.subtitle2">Como funciona?</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Após enviar sua solicitação, ela será analisada pelos administradores do sistema.
+                        </MudText>
+                    </MudStack>
+                    
+                    <!-- Dicas -->
+                    <MudStack>
+                        <MudText Typo="Typo.subtitle2">Dicas</MudText>
+                        <MudList T="string" Dense="true">
+                            <MudListItem T="string">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                                Escolha datas realistas
+                            </MudListItem>
+                            <MudListItem T="string">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                                Descreva o motivo da reserva
+                            </MudListItem>
+                            <MudListItem T="string">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                                Verifique a disponibilidade
+                            </MudListItem>
+                        </MudList>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private ReservaDto reserva = new();
+    private List<PerifericoDto> perifericosDisponiveis = new();
+    private DateTime? dataRetirada;
+    private DateTime? dataDevolucao;
+    private bool salvando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarPerifericosDisponiveis();
+    }
+
+    private async Task CarregarPerifericosDisponiveis()
+    {
+        try
+        {
+            // Carregar apenas periféricos disponíveis (ativos e não reservados)
+            var todosPerifericos = await PerifericoService.GetAllAsync();
+            var reservasAtivas = await ReservaService.GetAtivasAsync();
+            
+            var perifericosReservados = reservasAtivas.Select(r => r.PerifericoId).ToList();
+            perifericosDisponiveis = todosPerifericos
+                .Where(p => p.Ativo && !perifericosReservados.Contains(p.Id))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar periféricos: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SalvarReserva()
+    {
+        if (!ValidarFormulario())
+            return;
+
+        salvando = true;
+        
+        try
+        {
+            // Validar se o periférico ainda está disponível
+            if (!await ReservaService.PerifericoDisponivelAsync(
+                reserva.PerifericoId, dataRetirada.Value, dataDevolucao.Value))
+            {
+                Snackbar.Add("Periférico não está disponível no período solicitado. Por favor, escolha outro período.", Severity.Warning);
+                await CarregarPerifericosDisponiveis();
+                return;
+            }
+
+            // Configurar dados da reserva
+            reserva.DataInicio = dataRetirada.Value;
+            reserva.DataFim = dataDevolucao.Value;
+            reserva.UsuarioId = 1; // Usuário padrão para testes
+            
+            // Persistir no banco
+            var reservaCriada = await ReservaService.CreateAsync(reserva);
+            
+            // Mensagem de sucesso
+            Snackbar.Add($"Reserva criada com sucesso! ID: {reservaCriada.Id}", Severity.Success);
+            
+            // Limpar formulário
+            LimparFormulario();
+            
+            // Redirecionar para dashboard após 2 segundos
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/");
+        }
+        catch (PerifericoNaoDisponivelException ex)
+        {
+            Snackbar.Add($"Erro: {ex.Message}", Severity.Warning);
+            await CarregarPerifericosDisponiveis();
+        }
+        catch (ReservaException ex)
+        {
+            Snackbar.Add($"Erro na reserva: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro inesperado: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            salvando = false;
+        }
+    }
+
+    private bool ValidarFormulario()
+    {
+        // Validar periférico selecionado
+        if (reserva.PerifericoId == 0)
+        {
+            Snackbar.Add("Por favor, selecione um periférico.", Severity.Warning);
+            return false;
+        }
+
+        // Validar datas
+        if (!dataRetirada.HasValue)
+        {
+            Snackbar.Add("Por favor, selecione a data de retirada.", Severity.Warning);
+            return false;
+        }
+
+        if (!dataDevolucao.HasValue)
+        {
+            Snackbar.Add("Por favor, selecione a data de devolução.", Severity.Warning);
+            return false;
+        }
+
+        // Validar se data de devolução é posterior à data de retirada
+        if (dataDevolucao.Value <= dataRetirada.Value)
+        {
+            Snackbar.Add("A data de devolução deve ser posterior à data de retirada.", Severity.Warning);
+            return false;
+        }
+
+        // Validar se as datas não são no passado
+        if (dataRetirada.Value.Date < DateTime.Today)
+        {
+            Snackbar.Add("A data de retirada não pode ser no passado.", Severity.Warning);
+            return false;
+        }
+
+        // Validar período máximo (30 dias)
+        var periodo = dataDevolucao.Value.Date - dataRetirada.Value.Date;
+        if (periodo.Days > 30)
+        {
+            Snackbar.Add("O período máximo de reserva é de 30 dias.", Severity.Warning);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void LimparFormulario()
+    {
+        reserva = new();
+        dataRetirada = null;
+        dataDevolucao = null;
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task OnSubmit(EditContext context)
+    {
+        await SalvarReserva();
+    }
+} 

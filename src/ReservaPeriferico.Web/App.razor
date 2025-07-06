@@ -1,0 +1,24 @@
+﻿@using Microsoft.AspNetCore.Routing
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(MainLayout)">
+            <MudText Color="Color.Error">Página não encontrada.</MudText>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    // Componente para redirecionar para login
+  /*/  public class RedirectToLogin : ComponentBase
+    {
+        [Inject] NavigationManager Navigation { get; set; } = default!;
+        protected override void OnInitialized()
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }*/
+}

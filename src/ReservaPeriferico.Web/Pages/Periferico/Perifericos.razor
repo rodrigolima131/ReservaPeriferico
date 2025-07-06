@@ -1,0 +1,267 @@
+@page "/perifericos"
+@using MudBlazor
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Core.Enums
+@inject IPerifericoService PerifericoService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+<PageTitle>Gerenciar Periféricos</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-4 mb-4 custom-card">
+        <MudText Typo="Typo.h4" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Computer" Class="mr-2" />
+            Gerenciar Periféricos
+        </MudText>
+        
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Add" 
+                           OnClick="NovoPeriferico" FullWidth="true" Class="custom-button-primary"
+                           Title="Adicionar novo periférico ao sistema">
+                    Novo Periférico
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                           StartIcon="@Icons.Material.Filled.Refresh" 
+                           OnClick="LoadPerifericos" FullWidth="true" Class="custom-button-secondary"
+                           Title="Atualizar lista de periféricos">
+                    Atualizar
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string" @bind-Value="selectedTipo" Variant="Variant.Outlined" FullWidth="true"
+                           Label="Filtrar por Tipo" Title="Filtrar periféricos por tipo">
+                    <MudSelectItem Value="@("")">Todos os Tipos</MudSelectItem>
+                    @foreach (var tipo in Enum.GetValues<TipoPeriferico>())
+                    {
+                        <MudSelectItem Value="@tipo.ToString()">@tipo.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string" @bind-Value="selectedStatus" Variant="Variant.Outlined" FullWidth="true"
+                           Label="Filtrar por Status" Title="Filtrar periféricos por status">
+                    <MudSelectItem Value="@("")">Todos os Status</MudSelectItem>
+                    <MudSelectItem Value="@("true")">Ativo</MudSelectItem>
+                    <MudSelectItem Value="@("false")">Inativo</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+    
+    <MudPaper Class="pa-4 custom-card">
+        <MudTable Items="@filteredPerifericos" Dense="true" Hover="true" Loading="@loading" 
+                   Striped="true" Bordered="true" FixedHeader="true" Height="400px"
+                   Filter="new Func<PerifericoDto,bool>(FilterFunc)">
+            <ToolBarContent>
+                <MudTextField @bind-Value="searchString" Placeholder="Buscar periféricos..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                             IconSize="Size.Medium" Class="mt-0" Variant="Variant.Outlined"
+                             Title="Buscar por nome, tipo, marca, modelo ou número de série" />
+                <MudSpacer />
+                <MudText Typo="Typo.body2" Class="mr-2">
+                    Total: @filteredPerifericos.Count() periféricos
+                </MudText>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Nome</MudTh>
+                <MudTh>Tipo</MudTh>
+                <MudTh>Marca/Modelo</MudTh>
+                <MudTh>Número de Série</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Data Cadastro</MudTh>
+                <MudTh>Ações</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Nome">
+                    <MudText Typo="Typo.body1" Class="font-weight-medium">@context.Nome</MudText>
+                    @if (!string.IsNullOrEmpty(context.Descricao))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Descricao</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Tipo">
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="custom-chip-primary">@context.Tipo</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Marca/Modelo">
+                    <MudText Typo="Typo.body2">@context.Marca</MudText>
+                    @if (!string.IsNullOrEmpty(context.Modelo))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Modelo</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Número de Série">
+                    <MudText Typo="Typo.body2" Class="font-family-mono">@context.NumeroSerie</MudText>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.Ativo ? Color.Success : Color.Error)" 
+                             Size="Size.Small" Variant="Variant.Filled" 
+                             Class="@(context.Ativo ? "custom-chip-success" : "custom-chip-error")">
+                        @(context.Ativo ? "Ativo" : "Inativo")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Data Cadastro">
+                    <MudText Typo="Typo.caption">@context.DataCadastro.ToString("dd/MM/yyyy")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Ações">
+                    <MudStack Row="true" Spacing="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
+                                       OnClick="@(() => EditarPeriferico(context))" 
+                                       Size="Size.Small" Title="Editar periférico" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                                       OnClick="@(() => DeletePeriferico(context))" 
+                                       Size="Size.Small" Title="Excluir periférico" />
+                        <MudIconButton Icon="@(context.Ativo ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" 
+                                       Color="@(context.Ativo ? Color.Warning : Color.Success)" 
+                                       OnClick="@(() => ToggleStatus(context))" 
+                                       Size="Size.Small" Title="@(context.Ativo ? "Desativar periférico" : "Ativar periférico")" />
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<PerifericoDto> perifericos = new();
+    private bool loading = true;
+    private string searchString = "";
+    private string selectedTipo = "";
+    private string selectedStatus = "";
+
+    private IEnumerable<PerifericoDto> filteredPerifericos => perifericos.Where(FilterFunc);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPerifericos();
+    }
+
+    private async Task LoadPerifericos()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+            
+            var result = await PerifericoService.GetAllAsync();
+            perifericos = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar periféricos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NovoPeriferico()
+    {
+        Navigation.NavigateTo("/periferico/novo");
+    }
+
+    private void EditarPeriferico(PerifericoDto periferico)
+    {
+        Navigation.NavigateTo($"/periferico/editar/{periferico.Id}");
+    }
+
+    private async Task DeletePeriferico(PerifericoDto periferico)
+    {
+        var dialog = await DialogService.ShowMessageBox(
+            "Confirmar exclusão",
+            $"Deseja realmente excluir o periférico '{periferico.Nome}'?",
+            yesText: "Excluir",
+            cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }
+        );
+        
+        if (dialog == true)
+        {
+            try
+            {
+                await PerifericoService.DeleteAsync(periferico.Id);
+                await LoadPerifericos();
+                Snackbar.Add("Periférico excluído com sucesso!", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erro ao excluir periférico: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ToggleStatus(PerifericoDto periferico)
+    {
+        var action = periferico.Ativo ? "desativar" : "ativar";
+        var dialog = await DialogService.ShowMessageBox(
+            "Confirmar alteração",
+            $"Deseja realmente {action} o periférico '{periferico.Nome}'?",
+            yesText: action == "desativar" ? "Desativar" : "Ativar",
+            cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }
+        );
+        
+        if (dialog == true)
+        {
+            try
+            {
+                periferico.Ativo = !periferico.Ativo;
+                periferico.DataAtualizacao = DateTime.UtcNow;
+                await PerifericoService.UpdateAsync(periferico.Id, periferico);
+                await LoadPerifericos();
+                Snackbar.Add($"{action} Periférico realizado com sucesso!", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erro ao {action} periférico: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private bool FilterFunc(PerifericoDto periferico)
+    {
+        // Filtro por texto de busca
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var searchLower = searchString.ToLowerInvariant();
+            if (!periferico.Nome.ToLowerInvariant().Contains(searchLower) &&
+                !periferico.Tipo.ToLowerInvariant().Contains(searchLower) &&
+                !periferico.Marca.ToLowerInvariant().Contains(searchLower) &&
+                !periferico.NumeroSerie.ToLowerInvariant().Contains(searchLower) &&
+                !(periferico.Modelo?.ToLowerInvariant().Contains(searchLower) ?? false) &&
+                !(periferico.Descricao?.ToLowerInvariant().Contains(searchLower) ?? false))
+            {
+                return false;
+            }
+        }
+
+        // Filtro por tipo
+        if (!string.IsNullOrWhiteSpace(selectedTipo) && periferico.Tipo != selectedTipo)
+        {
+            return false;
+        }
+
+        // Filtro por status
+        if (!string.IsNullOrWhiteSpace(selectedStatus))
+        {
+            var statusFilter = bool.Parse(selectedStatus);
+            if (periferico.Ativo != statusFilter)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+} 

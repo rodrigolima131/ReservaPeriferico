@@ -1,0 +1,70 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@using MudBlazor
+
+<MudThemeProvider Theme="CustomTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="2" Color="Color.Primary" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
+                       OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3 font-weight-bold" Color="Color.Inherit">
+            <MudIcon Icon="@Icons.Material.Filled.Devices" Class="mr-2" />Reserva de Periféricos
+        </MudText>
+        <MudSpacer />
+    </MudAppBar>
+    
+    <MudDrawer Open="_drawerOpen" Elevation="2" Color="Color.Default" Variant="DrawerVariant.Responsive">
+        <NavMenu />
+    </MudDrawer>
+    
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6 pb-6">
+            @Body
+        </MudContainer>
+        <MudDivider Class="my-0" />
+        <footer class="text-center py-2" style="color: #00dbff; font-size: 0.95rem;">
+            © @(DateTime.Now.Year) Reserva de Periféricos — Sistema interno
+        </footer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    MudTheme CustomTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#002233", 
+            PrimaryDarken = "#012e45",
+            Secondary = "#a44dff",
+           // Success = "#00ffd4",
+           // Warning = "#ff8900",
+           // Error = "#ff009e",
+            Info = "#00dbff",
+            Background = "#ffffff",
+            Surface = "#ffffff"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#00dbff",
+            PrimaryDarken = "012e45",
+            Secondary = "#a44dff",
+            //Success = "#00ffd4",
+            //Warning = "#ff8900",
+            //Error = "#ff009e",
+            Info = "#00dbff",
+            Background = "#1a1a1a",
+            Surface = "#2d2d2d"
+        }
+    };
+}
