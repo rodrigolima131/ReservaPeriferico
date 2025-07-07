@@ -43,7 +43,7 @@ ReservaPeriferico/
 
 ## Como rodar localmente
 
-1. Instale o .NET 7 ou superior
+1. Instale o .NET 9 ou superior
 2. Configure o banco PostgreSQL e ajuste a connection string em `appsettings.json`
 3. Execute:
    ```sh
