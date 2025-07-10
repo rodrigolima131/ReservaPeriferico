@@ -12,6 +12,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Periferico> periferico { get; set; }
     public DbSet<Usuario> usuario { get; set; }
     public DbSet<Reserva> reserva { get; set; }
+    public DbSet<Equipe> Equipes { get; set; }
+    public DbSet<UsuarioEquipe> UsuarioEquipes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -128,6 +130,39 @@ public class ApplicationDbContext : DbContext
                   .WithMany(e => e.Reservas)
                   .HasForeignKey(e => e.PerifericoId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuração da entidade Equipe
+        modelBuilder.Entity<Equipe>(entity =>
+        {
+            entity.ToTable("equipe");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Nome).HasColumnName("nome").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Descricao).HasColumnName("descricao").HasMaxLength(500);
+            entity.Property(e => e.UsuarioAdministradorId).HasColumnName("usuario_administrador_id").IsRequired();
+            entity.Property(e => e.DataCadastro).HasColumnName("data_cadastro");
+            entity.Property(e => e.DataAtualizacao).HasColumnName("data_atualizacao");
+            entity.HasIndex(e => e.Nome).IsUnique();
+        });
+
+        // Configuração da entidade UsuarioEquipe
+        modelBuilder.Entity<UsuarioEquipe>(entity =>
+        {
+            entity.ToTable("usuario_equipe");
+            entity.HasKey(ue => new { ue.UsuarioId, ue.EquipeId });
+            entity.Property(ue => ue.UsuarioId).HasColumnName("usuario_id");
+            entity.Property(ue => ue.EquipeId).HasColumnName("equipe_id");
+            entity.Property(ue => ue.IsAdministrador).HasColumnName("is_administrador");
+            entity.Property(ue => ue.DataEntrada).HasColumnName("data_entrada");
+            entity.HasOne(ue => ue.Usuario)
+                  .WithMany()
+                  .HasForeignKey(ue => ue.UsuarioId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(ue => ue.Equipe)
+                  .WithMany(e => e.Membros)
+                  .HasForeignKey(ue => ue.EquipeId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

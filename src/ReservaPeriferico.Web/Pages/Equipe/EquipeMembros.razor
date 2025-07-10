@@ -1,0 +1,156 @@
+@page "/equipe/membros/{Id:int}"
+@using MudBlazor
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Application.DTOs
+@inject IEquipeService EquipeService
+@inject IUsuarioService UsuarioService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Membros da Equipe</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Class="pa-4 custom-card">
+        <MudStack>
+            <!-- Cabeçalho -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Class="mr-2" />
+                    <MudText Typo="Typo.h4">Membros da Equipe</MudText>
+                </MudStack>
+                
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                           StartIcon="@Icons.Material.Filled.ArrowBack" 
+                           OnClick="VoltarParaLista" Class="custom-button-secondary">
+                    Voltar
+                </MudButton>
+            </MudStack>
+
+            @if (equipe != null)
+            {
+                <!-- Informações da Equipe -->
+                <MudDivider Class="my-3" />
+                <MudStack>
+                    <MudText Typo="Typo.h5" Color="Color.Primary">@equipe.Nome</MudText>
+                    @if (!string.IsNullOrEmpty(equipe.Descricao))
+                    {
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">@equipe.Descricao</MudText>
+                    }
+                </MudStack>
+
+                <!-- Lista de Membros -->
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.h6" Class="mb-3">Membros (@membros.Count)</MudText>
+                
+                @if (membros.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        Esta equipe ainda não possui membros além do administrador.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudList T="UsuarioDto" Dense="true">
+                        @foreach (var membro in membros)
+                        {
+                            <MudListItem T="UsuarioDto">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudAvatar Size="Size.Medium" Color="Color.Primary">@membro.Nome.Substring(0,1)</MudAvatar>
+                                        <MudStack Class="ml-3">
+                                            <MudText Typo="Typo.body1" Class="font-weight-medium">@membro.Nome</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@membro.Email</MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                    @if (membro.Id == equipe.UsuarioAdministradorId)
+                                    {
+                                        <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Class="mr-1" />
+                                            Administrador
+                                        </MudChip>
+                                    }
+                                </MudStack>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+
+                <!-- Informações adicionais -->
+                <MudDivider Class="my-4" />
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <strong>Data de Cadastro:</strong> @equipe.DataCadastro.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudItem>
+                    @if (equipe.DataAtualizacao.HasValue)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                <strong>Última Atualização:</strong> @equipe.DataAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+            else if (loading)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error">
+                    Equipe não encontrada.
+                </MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private EquipeDto? equipe;
+    private List<UsuarioDto> membros = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarEquipe();
+    }
+
+    private async Task CarregarEquipe()
+    {
+        try
+        {
+            loading = true;
+            equipe = await EquipeService.GetByIdAsync(Id);
+            
+            if (equipe != null)
+            {
+                // Carregar dados dos membros
+                var usuarios = await UsuarioService.GetAllAsync();
+                var usuariosDict = usuarios.ToDictionary(u => u.Id, u => u);
+                
+                membros = equipe.MembrosIds
+                    .Select(id => usuariosDict.GetValueOrDefault(id))
+                    .Where(u => u != null)
+                    .ToList()!;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar equipe: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void VoltarParaLista()
+    {
+        Navigation.NavigateTo("/equipes");
+    }
+} 

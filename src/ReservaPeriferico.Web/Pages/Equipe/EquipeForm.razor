@@ -1,0 +1,350 @@
+@page "/equipe/cadastro"
+@page "/equipe/editar/{Id:int}"
+@using MudBlazor
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Application.DTOs
+@inject IEquipeService EquipeService
+@inject IUsuarioService UsuarioService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>@(editingEquipe?.Id > 0 ? "Editar" : "Nova") Equipe</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Class="pa-4 custom-card">
+        <MudStack>
+            <!-- Cabeçalho -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@(editingEquipe?.Id > 0 ? Icons.Material.Filled.Edit : Icons.Material.Filled.GroupAdd)" 
+                             Color="Color.Primary" Class="mr-2" />
+                    <MudText Typo="Typo.h4">@(editingEquipe?.Id > 0 ? "Editar" : "Nova") Equipe</MudText>
+                </MudStack>
+                
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.ArrowBack" 
+                               OnClick="VoltarParaLista" Class="custom-button-secondary">
+                        Voltar
+                    </MudButton>
+                    <MudButton Color="Color.Primary" OnClick="SalvarEquipe" Disabled="!success" 
+                               Variant="Variant.Filled" Class="custom-button-primary"
+                               StartIcon="@Icons.Material.Filled.Save">
+                        Salvar
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+
+            <!-- Formulário -->
+            <MudForm @ref="form" @bind-IsValid="@success" ValidationDelay="0">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="editingEquipe.Nome" Label="Nome da Equipe *" Required="true" 
+                                       Variant="Variant.Outlined" Validation="@(new Func<string, IEnumerable<string>>(ValidateNome))"
+                                       Title="Nome da equipe (obrigatório)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="editingEquipe.Descricao" Label="Descrição" Lines="3" 
+                                       Variant="Variant.Outlined" Title="Descrição da equipe (opcional)"
+                                       Validation="@(new Func<string, IEnumerable<string>>(ValidateDescricao))"
+                                       MaxLength="500" Counter="500" Immediate="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudSelect @bind-Value="editingEquipe.UsuarioAdministradorId" Label="Administrador da Equipe *" 
+                                   Variant="Variant.Outlined" Required="true" Validation="@(new Func<int, IEnumerable<string>>(ValidateAdministrador))">
+                            <MudSelectItem Value="0">Selecione um administrador</MudSelectItem>
+                            @foreach (var usuario in usuariosDisponiveis)
+                            {
+                                <MudSelectItem Value="@usuario.Id">@usuario.Nome (@usuario.Email)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">Membros da Equipe (Opcional)</MudText>
+                        @if (editingEquipe.UsuarioAdministradorId > 0)
+                        {
+                            var admin = usuariosDisponiveis.FirstOrDefault(u => u.Id == editingEquipe.UsuarioAdministradorId);
+                            if (admin != null)
+                            {
+                                <MudAlert Severity="Severity.Info" Class="mb-3">
+                                    <strong>Administrador:</strong> @admin.Nome (@admin.Email)
+                                </MudAlert>
+                            }
+                        }
+                        <MudStack Row="true" Spacing="2">
+                            <MudSelect @bind-Value="novoMembroId" Label="Adicionar membro" Variant="Variant.Outlined" Style="min-width: 300px;">
+                                <MudSelectItem Value="0">Selecione um usuário</MudSelectItem>
+                                @foreach (var usuario in usuariosDisponiveis.Where(u => u.Id != editingEquipe.UsuarioAdministradorId))
+                                {
+                                    <MudSelectItem Value="@usuario.Id">@usuario.Nome (@usuario.Email)</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
+                                       OnClick="AdicionarMembro" Disabled="novoMembroId == 0">
+                                Adicionar
+                            </MudButton>
+                        </MudStack>
+                        
+                        <!-- Campo hidden para detectar mudanças nos membros -->
+                        <MudTextField @bind-Value="membrosHash" Style="display: none;" />
+                        
+                        @if (membrosSelecionados.Any())
+                        {
+                            <MudPaper Class="pa-3 mt-3" Style="max-height: 200px; overflow-y: auto;">
+                                <MudTable Items="@membrosSelecionados" Dense="true" Hover="true" 
+                                         Striped="true" Bordered="true">
+                                    <HeaderContent>
+                                        <MudTh>Nome</MudTh>
+                                        <MudTh>Email</MudTh>
+                                        <MudTh Style="width: 60px;">Ações</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Nome">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                                <MudAvatar Size="Size.Small" Color="Color.Primary">@context.Nome.Substring(0,1)</MudAvatar>
+                                                <MudText Class="ml-2">@context.Nome</MudText>
+                                            </MudStack>
+                                        </MudTd>
+                                        <MudTd DataLabel="Email">
+                                            <MudText Typo="Typo.body2">@context.Email</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="Ações">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                                                         OnClick="@(() => RemoverMembro(context.Id))" 
+                                                         Size="Size.Small" Title="Remover membro" />
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mt-3">
+                                Nenhum membro adicionado ainda. Você pode adicionar membros agora ou posteriormente.
+                            </MudAlert>
+                        }
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+
+            <!-- Informações adicionais -->
+            @if (editingEquipe?.Id > 0)
+            {
+                <MudDivider Class="my-4" />
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <strong>Data de Cadastro:</strong> @editingEquipe.DataCadastro.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudItem>
+                    @if (editingEquipe.DataAtualizacao.HasValue)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                <strong>Última Atualização:</strong> @editingEquipe.DataAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private EquipeDto editingEquipe = new();
+    private List<UsuarioDto> usuariosDisponiveis = new();
+    private List<UsuarioDto> membrosSelecionados = new();
+    private int novoMembroId = 0;
+    private bool success;
+    private MudForm form = default!;
+    private string membrosHash = string.Empty; // Campo hidden para detectar mudanças
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarUsuarios();
+        await CarregarEquipe();
+        
+        // Garantir que o hash dos membros seja atualizado após carregar tudo
+        membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
+    }
+
+    private async Task CarregarUsuarios()
+    {
+        try
+        {
+            usuariosDisponiveis = (await UsuarioService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar usuários: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task CarregarEquipe()
+    {
+        try
+        {
+            if (Id.HasValue && Id.Value > 0)
+            {
+                // Modo edição
+                var equipe = await EquipeService.GetByIdAsync(Id.Value);
+                if (equipe != null)
+                {
+                    editingEquipe = equipe;
+                    
+                    // Carregar membros da equipe após ter os usuários disponíveis
+                    // Excluir o administrador da lista de membros para não confundir
+                    if (usuariosDisponiveis.Any())
+                    {
+                        membrosSelecionados = equipe.MembrosIds
+                            .Where(id => id != equipe.UsuarioAdministradorId) // Excluir administrador
+                            .Select(id => usuariosDisponiveis.FirstOrDefault(u => u.Id == id))
+                            .Where(u => u != null)
+                            .ToList()!;
+                    }
+                    
+                    // Atualizar o hash dos membros selecionados
+                    membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
+                }
+                else
+                {
+                    Snackbar.Add("Equipe não encontrada!", Severity.Error);
+                    Navigation.NavigateTo("/equipes");
+                    return;
+                }
+            }
+            else
+            {
+                // Modo novo - não definir administrador padrão
+                editingEquipe = new EquipeDto
+                {
+                    Id = 0,
+                    Nome = "",
+                    Descricao = "",
+                    UsuarioAdministradorId = 0, // Será definido pelo usuário
+                    MembrosIds = new List<int>(),
+                    DataCadastro = DateTime.UtcNow,
+                    DataAtualizacao = null
+                };
+                membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id)); // Inicializar hash para novo
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar equipe: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async void AdicionarMembro()
+    {
+        if (novoMembroId > 0)
+        {
+            var usuario = usuariosDisponiveis.FirstOrDefault(u => u.Id == novoMembroId);
+            if (usuario != null && !membrosSelecionados.Any(m => m.Id == usuario.Id))
+            {
+                membrosSelecionados.Add(usuario);
+                // Atualizar o hash dos membros selecionados
+                membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
+                
+                // Forçar a validação do formulário para detectar mudanças
+                await form.Validate();
+                StateHasChanged(); // Força a atualização da UI
+            }
+            novoMembroId = 0;
+        }
+    }
+
+    private async void RemoverMembro(int id)
+    {
+        var membro = membrosSelecionados.FirstOrDefault(m => m.Id == id);
+        if (membro != null)
+        {
+            membrosSelecionados.Remove(membro);
+            // Atualizar o hash dos membros selecionados
+            membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
+            
+            // Forçar a validação do formulário para detectar mudanças
+            await form.Validate();
+            StateHasChanged(); // Força a atualização da UI
+        }
+    }
+
+    private async Task SalvarEquipe()
+    {
+        try
+        {
+            // Validar o formulário antes de prosseguir
+            await form.Validate();
+            if (!form.IsValid)
+            {
+                Snackbar.Add("Por favor, corrija os erros no formulário antes de salvar.", Severity.Warning);
+                return;
+            }
+
+            // Validar unicidade do nome
+            var equipeExistente = await EquipeService.GetByNomeAsync(editingEquipe.Nome);
+            if (equipeExistente != null && equipeExistente.Id != editingEquipe.Id)
+            {
+                Snackbar.Add("Já existe uma equipe com esse nome!", Severity.Warning);
+                return;
+            }
+
+            // Usar apenas os membros selecionados (sem adicionar o administrador automaticamente)
+            editingEquipe.MembrosIds = membrosSelecionados.Select(m => m.Id).ToList();
+            
+            if (editingEquipe.Id > 0)
+            {
+                await EquipeService.UpdateAsync(editingEquipe.Id, editingEquipe);
+                Snackbar.Add("Equipe atualizada com sucesso!", Severity.Success);
+            }
+            else
+            {
+                editingEquipe.DataCadastro = DateTime.UtcNow;
+                await EquipeService.CreateAsync(editingEquipe);
+                Snackbar.Add("Equipe criada com sucesso!", Severity.Success);
+            }
+            
+            Navigation.NavigateTo("/equipes");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao salvar equipe: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void VoltarParaLista()
+    {
+        Navigation.NavigateTo("/equipes");
+    }
+
+    // Validações
+    private IEnumerable<string> ValidateNome(string nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome))
+            yield return "Nome é obrigatório";
+        else if (nome.Length > 100)
+            yield return "Nome deve ter no máximo 100 caracteres";
+    }
+
+    private IEnumerable<string> ValidateDescricao(string descricao)
+    {
+        if (string.IsNullOrWhiteSpace(descricao))
+            yield break; // Descrição é opcional
+        
+        if (descricao.Length > 500)
+            yield return "Descrição deve ter no máximo 500 caracteres";
+    }
+
+    private IEnumerable<string> ValidateAdministrador(int administradorId)
+    {
+        if (administradorId == 0)
+            yield return "Administrador é obrigatório";
+        else if (!usuariosDisponiveis.Any(u => u.Id == administradorId))
+            yield return "Administrador selecionado não é válido";
+    }
+} 
