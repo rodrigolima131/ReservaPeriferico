@@ -22,11 +22,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPerifericoRepository, PerifericoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IReservaRepository, ReservaRepository>();
+        services.AddScoped<IEquipeRepository, EquipeRepository>();
+        services.AddScoped<IUsuarioEquipeRepository, UsuarioEquipeRepository>();
 
         // Registrar serviços de aplicação
         services.AddScoped<IPerifericoService, PerifericoService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IReservaService, ReservaService>();
+        services.AddScoped<IEquipeService, EquipeService>();
 
         return services;
     }

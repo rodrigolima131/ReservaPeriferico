@@ -1,0 +1,235 @@
+@page "/equipes"
+@using MudBlazor
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Application.DTOs
+@inject IEquipeService EquipeService
+@inject IUsuarioService UsuarioService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Gerenciar Equipes</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-4 mb-4 custom-card">
+        <MudText Typo="Typo.h4" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Groups" Class="mr-2" />
+            Gerenciar Equipes
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.GroupAdd"
+                           OnClick="NovaEquipe" FullWidth="true" Class="custom-button-primary">
+                    Nova Equipe
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadEquipes" FullWidth="true" Class="custom-button-secondary">
+                    Atualizar
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="6">
+                <MudTextField @bind-Value="filtroNome" Label="Buscar por nome" Variant="Variant.Outlined" 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                             Immediate="true" OnBlur="LoadEquipes" Style="width: 100%; min-width: 250px;" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+    
+    <MudPaper Class="pa-4 custom-card">
+        <MudTable Items="@equipesFiltradas" Dense="true" Hover="true" Loading="@loading" 
+                   Striped="true" Bordered="true" FixedHeader="true" Height="400px"
+                   Filter="new Func<EquipeDto,bool>(FilterFunc)" Class="mt-4">
+            <ToolBarContent>
+                <MudTextField @bind-Value="searchString" Placeholder="Buscar equipes..." 
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                             IconSize="Size.Medium" Class="mt-0" Variant="Variant.Outlined"
+                             Title="Buscar por nome ou descrição" Style="min-width: 300px;" />
+                <MudSpacer />
+                <MudText Typo="Typo.body2" Class="mr-2">
+                    Total: @equipesFiltradas.Count() equipes
+                </MudText>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh Style="min-width: 150px;">Nome</MudTh>
+                <MudTh Style="min-width: 200px;">Descrição</MudTh>
+                <MudTh Style="min-width: 150px;">Administrador</MudTh>
+                <MudTh Style="min-width: 120px;">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="font-weight-medium">Membros</MudText>
+                    </MudStack>
+                </MudTh>
+                <MudTh Style="min-width: 120px;">Data Cadastro</MudTh>
+                <MudTh Style="min-width: 120px;">Ações</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Nome">
+                    <MudText Typo="Typo.body1" Class="font-weight-medium">@context.Nome</MudText>
+                </MudTd>
+                <MudTd DataLabel="Descrição">
+                    @if (!string.IsNullOrEmpty(context.Descricao))
+                    {
+                        var descricaoTruncada = context.Descricao.Length > 25 
+                            ? context.Descricao.Substring(0, 25) + "..." 
+                            : context.Descricao;
+                        <MudText Typo="Typo.body2" Title="@context.Descricao">@descricaoTruncada</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Sem descrição</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Administrador">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudAvatar Size="Size.Small" Color="Color.Success">@ObterNomeAdministrador(context.UsuarioAdministradorId).Substring(0,1)</MudAvatar>
+                        <MudText Typo="Typo.body2">@ObterNomeAdministrador(context.UsuarioAdministradorId)</MudText>
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Membros">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="custom-chip-primary">
+                            @context.MembrosIds.Count
+                        </MudChip>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @(context.MembrosIds.Count == 1 ? "membro" : "membros")
+                        </MudText>
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Data Cadastro">
+                    <MudText Typo="Typo.caption">@context.DataCadastro.ToString("dd/MM/yyyy")</MudText>
+                </MudTd>
+                <MudTd DataLabel="Ações">
+                    <MudStack Row="true" Spacing="1" Justify="Justify.Center">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
+                                       OnClick="@(() => EditarEquipe(context))" 
+                                       Size="Size.Small" Title="Editar equipe" />
+                        <MudIconButton Icon="@Icons.Material.Filled.People" Color="Color.Info" 
+                                       OnClick="@(() => VisualizarMembros(context))" 
+                                       Size="Size.Small" Title="Ver membros" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                                       OnClick="@(() => ExcluirEquipe(context))" 
+                                       Size="Size.Small" Title="Excluir equipe" />
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<EquipeDto> equipes = new();
+    private bool loading = true;
+    private string searchString = "";
+    private string filtroNome = string.Empty;
+    private Dictionary<int, UsuarioDto> usuariosCache = new();
+
+    private IEnumerable<EquipeDto> equipesFiltradas => equipes.Where(FilterFunc);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEquipes();
+        await CarregarUsuarios();
+    }
+
+    private async Task LoadEquipes()
+    {
+        try
+        {
+            loading = true;
+            StateHasChanged();
+            
+            equipes = (await EquipeService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar equipes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CarregarUsuarios()
+    {
+        var usuarios = await UsuarioService.GetAllAsync();
+        usuariosCache = usuarios.ToDictionary(u => u.Id, u => u);
+    }
+
+    private string ObterNomeAdministrador(int id)
+    {
+        return usuariosCache.TryGetValue(id, out var usuario) ? usuario.Nome : "-";
+    }
+
+    private void NovaEquipe()
+    {
+        Navigation.NavigateTo("/equipe/cadastro");
+    }
+
+    private void EditarEquipe(EquipeDto equipe)
+    {
+        Navigation.NavigateTo($"/equipe/editar/{equipe.Id}");
+    }
+
+    private async Task ExcluirEquipe(EquipeDto equipe)
+    {
+        var dialog = await DialogService.ShowMessageBox(
+            "Confirmar exclusão",
+            $"Deseja realmente excluir a equipe '{equipe.Nome}'?",
+            yesText: "Excluir",
+            cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }
+        );
+        if (dialog == true)
+        {
+            try
+            {
+                await EquipeService.DeleteAsync(equipe.Id);
+                await LoadEquipes();
+                Snackbar.Add("Equipe excluída com sucesso!", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erro ao excluir equipe: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void VisualizarMembros(EquipeDto equipe)
+    {
+        Navigation.NavigateTo($"/equipe/membros/{equipe.Id}");
+    }
+
+    private bool FilterFunc(EquipeDto equipe)
+    {
+        // Filtro por texto de busca
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var searchLower = searchString.ToLowerInvariant();
+            if (!equipe.Nome.ToLowerInvariant().Contains(searchLower) &&
+                !(equipe.Descricao?.ToLowerInvariant().Contains(searchLower) ?? false))
+            {
+                return false;
+            }
+        }
+
+        // Filtro por nome específico (se ainda estiver sendo usado)
+        if (!string.IsNullOrWhiteSpace(filtroNome))
+        {
+            if (!equipe.Nome.Contains(filtroNome, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+} 

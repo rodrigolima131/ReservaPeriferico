@@ -1,0 +1,99 @@
+/* Estilos personalizados para o sistema de Reserva de Periféricos */
+
+.custom-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.custom-button-primary {
+    background-color: #002233 !important;
+    color: white !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+}
+
+.custom-button-primary:hover {
+    background-color: #012e45 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.custom-button-secondary {
+    border-color: #a44dff !important;
+    color: #a44dff !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+}
+
+.custom-button-secondary:hover {
+    background-color: #a44dff !important;
+    color: white !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.custom-chip-primary {
+    background-color: #00dbff !important;
+    color: #002233 !important;
+    font-weight: 500 !important;
+}
+
+/* Melhorias na responsividade */
+@media (max-width: 768px) {
+    .custom-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Estilos para a tabela */
+.mud-table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mud-table th {
+    background-color: #f5f5f5 !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+}
+
+.mud-table tr:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Estilos para campos de busca */
+.mud-text-field {
+    border-radius: 6px;
+}
+
+.mud-text-field .mud-input-root {
+    border-radius: 6px;
+}
+
+/* Estilos para avatares */
+.mud-avatar {
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para chips */
+.mud-chip {
+    border-radius: 16px;
+    font-weight: 500;
+}
+
+/* Melhorias gerais */
+.mud-container {
+    padding: 0 16px;
+}
+
+.mud-paper {
+    transition: all 0.3s ease;
+}
+
+.mud-paper:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+} 
