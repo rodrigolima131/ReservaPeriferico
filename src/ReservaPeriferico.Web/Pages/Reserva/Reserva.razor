@@ -3,11 +3,13 @@
 @using ReservaPeriferico.Application.DTOs
 @using ReservaPeriferico.Application.Interfaces
 @using ReservaPeriferico.Core.Exceptions
+@using ReservaPeriferico.Web.Components.Reserva
 @inject IPerifericoService PerifericoService
 @inject IUsuarioService UsuarioService
 @inject IReservaService ReservaService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>Nova Reserva - Sistema de Reserva</PageTitle>
 
@@ -36,15 +38,13 @@
                     <DataAnnotationsValidator />
                     <MudStack Spacing="4">
                         <!-- Seleção de Periférico -->
-                        <MudSelect T="int" Label="Periférico *" @bind-Value="reserva.PerifericoId" Required>
-                            <MudSelectItem Value="0">Selecione um periférico</MudSelectItem>
-                            @foreach (var periferico in perifericosDisponiveis)
-                            {
-                                <MudSelectItem Value="@periferico.Id">
-                                    @periferico.Nome (@periferico.Tipo)
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
+                        <MudStack>
+                            <MudText Typo="Typo.subtitle2">Periférico *</MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AbrirDialogSelecionarPeriferico" Disabled="@salvando">
+                                <MudIcon Icon="@(perifericoSelecionado is not null ? Icons.Material.Filled.Devices : Icons.Material.Filled.Search)" Class="mr-2" />
+                                @(perifericoSelecionado is not null ? $"{perifericoSelecionado.Nome} ({perifericoSelecionado.Tipo})" : "Selecionar Periférico")
+                            </MudButton>
+                        </MudStack>
 
                         <!-- Datas -->
                         <MudGrid>
@@ -140,6 +140,7 @@
 @code {
     private ReservaDto reserva = new();
     private List<PerifericoDto> perifericosDisponiveis = new();
+    private PerifericoDto? perifericoSelecionado = null;
     private DateTime? dataRetirada;
     private DateTime? dataDevolucao;
     private bool salvando = false;
@@ -167,6 +168,44 @@
             Snackbar.Add($"Erro ao carregar periféricos: {ex.Message}", Severity.Error);
         }
     }
+
+    private async Task AbrirDialogSelecionarPeriferico()
+    {
+        IDialogReference? dialogRef = null; // Declarar primeiro
+        
+        var parameters = new DialogParameters 
+        { 
+            ["Perifericos"] = perifericosDisponiveis,
+            ["OnPerifericoSelecionado"] = new EventCallback<PerifericoDto>(this, async (PerifericoDto periferico) =>
+            {
+                perifericoSelecionado = periferico;
+                reserva.PerifericoId = periferico.Id;
+                if (dialogRef != null)
+                    dialogRef.Close(); // Mudança aqui: Close() ao invés de CloseAsync()
+            }),
+            ["OnCancelar"] = new EventCallback(this, async () =>
+            {
+                if (dialogRef != null)
+                    dialogRef.Close(); // Mudança aqui: Close() ao invés de CloseAsync()
+            })
+        };
+        
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        dialogRef = await DialogService.ShowAsync<SelecionarPerifericoDialog>("Selecionar Periférico", parameters, options);
+    }
+
+    //private async Task AbrirDialogSelecionarPeriferico()
+    //{
+    //    var parameters = new DialogParameters { ["Perifericos"] = perifericosDisponiveis };
+    //    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+    //    var dialog = DialogService.Show<SelecionarPerifericoDialog>("Selecionar Periférico", parameters, options);
+    //    var result = await dialog.Result;
+    //    if (!result.Cancelled && result.Data != null && result.Data is PerifericoDto selecionado)
+    //    {
+    //        perifericoSelecionado = selecionado;
+    //        reserva.PerifericoId = selecionado.Id;
+    //    }
+    //}
 
     private async Task SalvarReserva()
     {
@@ -273,6 +312,7 @@
     private void LimparFormulario()
     {
         reserva = new();
+        perifericoSelecionado = null;
         dataRetirada = null;
         dataDevolucao = null;
     }

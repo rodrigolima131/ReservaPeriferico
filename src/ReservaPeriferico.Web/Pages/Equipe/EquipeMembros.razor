@@ -38,6 +38,14 @@
                     }
                 </MudStack>
 
+                <!-- Informações sobre regras de acesso -->
+                <MudAlert Severity="Severity.Info" Class="my-3">
+                    <MudText Typo="Typo.body2">
+                        <strong>Regras de Controle de Acesso:</strong> Apenas o administrador pode adicionar/remover membros. 
+                        O administrador não pode remover a si mesmo - para isso, será necessário excluir a equipe inteira.
+                    </MudText>
+                </MudAlert>
+
                 <!-- Lista de Membros -->
                 <MudDivider Class="my-3" />
                 <MudText Typo="Typo.h6" Class="mb-3">Membros (@membros.Count)</MudText>
@@ -56,7 +64,10 @@
                             <MudListItem T="UsuarioDto">
                                 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                                     <MudStack Row="true" AlignItems="AlignItems.Center">
-                                        <MudAvatar Size="Size.Medium" Color="Color.Primary">@membro.Nome.Substring(0,1)</MudAvatar>
+                                        <MudAvatar Size="Size.Medium" 
+                                                   Color="@(membro.Id == equipe.UsuarioAdministradorId ? Color.Success : Color.Primary)">
+                                            @membro.Nome.Substring(0,1)
+                                        </MudAvatar>
                                         <MudStack Class="ml-3">
                                             <MudText Typo="Typo.body1" Class="font-weight-medium">@membro.Nome</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@membro.Email</MudText>
@@ -64,9 +75,16 @@
                                     </MudStack>
                                     @if (membro.Id == equipe.UsuarioAdministradorId)
                                     {
-                                        <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
                                             <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Class="mr-1" />
                                             Administrador
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Outlined">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-1" />
+                                            Membro
                                         </MudChip>
                                     }
                                 </MudStack>

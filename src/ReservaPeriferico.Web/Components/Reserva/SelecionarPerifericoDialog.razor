@@ -1,0 +1,85 @@
+@using MudBlazor
+@using ReservaPeriferico.Application.DTOs
+@using Microsoft.AspNetCore.Components
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6">Selecionar Periférico</MudText>
+        
+        <MudTextField @bind-Value="filtro" Placeholder="Buscar por nome ou tipo..." 
+                     Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
+                     Immediate="true" />
+        
+        <div style="max-height: 400px; overflow-y: auto;">
+            <MudGrid>
+                @if (PerifericosFiltrados.Count == 0)
+                {
+                    <MudItem xs="12">
+                        <MudText Color="Color.Secondary">Nenhum periférico encontrado.</MudText>
+                    </MudItem>
+                }
+                else
+                {
+                    @foreach (var periferico in PerifericosFiltrados.Take(9))
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudButton Variant="Variant.Outlined" 
+                                       FullWidth="true"
+                                       Class="pa-4 text-left"
+                                       Style="height: auto; justify-content: flex-start;"
+                                       OnClick="@(() => SelecionarPeriferico(periferico))">
+                                <MudStack Spacing="1" AlignItems="AlignItems.Start">
+                                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@periferico.Nome</MudText>
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Outlined">
+                                        @periferico.Tipo
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Status: @(periferico.Ativo ? "Disponível" : "Indisponível")
+                                    </MudText>
+                                    @if (!string.IsNullOrEmpty(periferico.Marca))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Marca: @periferico.Marca
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </MudButton>
+                        </MudItem>
+                    }
+                }
+            </MudGrid>
+        </div>
+        
+        <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+            <MudButton Color="Color.Secondary" OnClick="FecharDialog">Cancelar</MudButton>
+        </MudStack>
+    </MudStack>
+</MudContainer>
+
+@code {
+    [Parameter] public List<PerifericoDto> Perifericos { get; set; } = new();
+    [Parameter] public EventCallback<PerifericoDto> OnPerifericoSelecionado { get; set; }
+    [Parameter] public EventCallback OnCancelar { get; set; }
+
+    private string filtro = string.Empty;
+    
+    private List<PerifericoDto> PerifericosFiltrados =>
+        string.IsNullOrWhiteSpace(filtro)
+            ? Perifericos
+            : Perifericos.Where(p =>
+                (p.Nome?.Contains(filtro, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.Tipo?.ToString().Contains(filtro, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+
+    private async Task SelecionarPeriferico(PerifericoDto periferico)
+    {
+        Console.WriteLine($"SelecionarPeriferico chamado para: {periferico.Nome}");
+        await OnPerifericoSelecionado.InvokeAsync(periferico);
+    }
+
+    private async Task FecharDialog()
+    {
+        Console.WriteLine("FecharDialog chamado");
+        await OnCancelar.InvokeAsync();
+    }
+}
