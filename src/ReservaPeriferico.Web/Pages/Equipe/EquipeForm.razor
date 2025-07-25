@@ -68,7 +68,14 @@
                             if (admin != null)
                             {
                                 <MudAlert Severity="Severity.Info" Class="mb-3">
-                                    <strong>Administrador:</strong> @admin.Nome (@admin.Email)
+                                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Success" />
+                                        <MudText><strong>Administrador:</strong> @admin.Nome (@admin.Email)</MudText>
+                                    </MudStack>
+                                    <MudText Typo="Typo.caption" Class="mt-2">
+                                        <strong>Regra:</strong> O administrador não pode ser removido da equipe. Para remover a si mesmo, 
+                                        será necessário excluir a equipe inteira.
+                                    </MudText>
                                 </MudAlert>
                             }
                         }
@@ -247,6 +254,14 @@
             var usuario = usuariosDisponiveis.FirstOrDefault(u => u.Id == novoMembroId);
             if (usuario != null && !membrosSelecionados.Any(m => m.Id == usuario.Id))
             {
+                // Verificar se não está tentando adicionar o administrador como membro
+                if (usuario.Id == editingEquipe.UsuarioAdministradorId)
+                {
+                    Snackbar.Add("O administrador já é automaticamente membro da equipe!", Severity.Warning);
+                    novoMembroId = 0;
+                    return;
+                }
+
                 membrosSelecionados.Add(usuario);
                 // Atualizar o hash dos membros selecionados
                 membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
@@ -264,13 +279,33 @@
         var membro = membrosSelecionados.FirstOrDefault(m => m.Id == id);
         if (membro != null)
         {
-            membrosSelecionados.Remove(membro);
-            // Atualizar o hash dos membros selecionados
-            membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
-            
-            // Forçar a validação do formulário para detectar mudanças
-            await form.Validate();
-            StateHasChanged(); // Força a atualização da UI
+            // Verificar se não está tentando remover o administrador
+            if (id == editingEquipe.UsuarioAdministradorId)
+            {
+                Snackbar.Add("O administrador não pode ser removido da equipe! Para remover a si mesmo, será necessário excluir a equipe inteira.", Severity.Warning);
+                return;
+            }
+
+            var dialog = await DialogService.ShowMessageBox(
+                "Confirmar remoção",
+                $"Deseja realmente remover '{membro.Nome}' da equipe?",
+                yesText: "Remover",
+                cancelText: "Cancelar",
+                options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }
+            );
+
+            if (dialog == true)
+            {
+                membrosSelecionados.Remove(membro);
+                // Atualizar o hash dos membros selecionados
+                membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
+                
+                // Forçar a validação do formulário para detectar mudanças
+                await form.Validate();
+                StateHasChanged(); // Força a atualização da UI
+                
+                Snackbar.Add($"'{membro.Nome}' removido da equipe com sucesso!", Severity.Success);
+            }
         }
     }
 
@@ -294,8 +329,14 @@
                 return;
             }
 
-            // Usar apenas os membros selecionados (sem adicionar o administrador automaticamente)
-            editingEquipe.MembrosIds = membrosSelecionados.Select(m => m.Id).ToList();
+            // Garantir que o administrador esteja sempre na lista de membros
+            var membrosIds = membrosSelecionados.Select(m => m.Id).ToList();
+            if (!membrosIds.Contains(editingEquipe.UsuarioAdministradorId))
+            {
+                membrosIds.Add(editingEquipe.UsuarioAdministradorId);
+            }
+            
+            editingEquipe.MembrosIds = membrosIds;
             
             if (editingEquipe.Id > 0)
             {
