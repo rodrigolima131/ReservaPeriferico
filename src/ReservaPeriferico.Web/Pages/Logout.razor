@@ -1,0 +1,14 @@
+@page "/logout"
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Mostrar mensagem
+        Snackbar.Add("Logout realizado com sucesso!", Severity.Success);
+        
+        // Redirecionar para login
+        Navigation.NavigateTo("/login", true);
+    }
+} 

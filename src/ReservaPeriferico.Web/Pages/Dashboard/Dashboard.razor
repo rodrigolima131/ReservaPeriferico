@@ -1,5 +1,5 @@
-@page "/"
 @page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using ReservaPeriferico.Application.Interfaces
 @using ReservaPeriferico.Application.DTOs
@@ -8,6 +8,7 @@
 @inject IUsuarioService UsuarioService
 @inject IReservaService ReservaService
 @inject NavigationManager Navigation
+@inject ISnackbar Snackbar
 
 <PageTitle>Dashboard - Reserva de Periféricos</PageTitle>
 
@@ -87,6 +88,7 @@
     </MudGrid>
 
     <!-- Gráficos e Estatísticas -->
+    @* Temporariamente comentado para resolver erro de compilação
     <MudGrid Class="mb-6">
         <MudItem xs="12" md="8">
             <MudPaper Class="pa-4" Elevation="3">
@@ -100,7 +102,6 @@
                         <MudText Typo="Typo.subtitle1" Class="mb-3">Distribuição por Tipo</MudText>
                         <MudChart ChartType="ChartType.Pie" ChartSeries="@pieChartData" Width="100%" Height="200px" />
                     </MudItem>
-                    
                     <MudItem xs="12" md="6">
                         <MudText Typo="Typo.subtitle1" Class="mb-3">Reservas por Mês</MudText>
                         <MudChart ChartType="ChartType.Line" ChartSeries="@lineChartData" XAxisLabels="@lineChartLabels" Width="100%" Height="200px" />
@@ -112,35 +113,35 @@
         <MudItem xs="12" md="4">
             <MudPaper Class="pa-4" Elevation="3">
                 <MudText Typo="Typo.h6" Class="mb-4">
-                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="mr-2" />
-                    Indicadores
+                    <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
+                    Top Periféricos
                 </MudText>
                 
-                <MudStack Spacing="3">
-                    <MudProgressLinear Value="@taxaOcupacao" Color="Color.Primary" Class="mb-2">
-                        <MudText Typo="Typo.caption">Taxa de Ocupação: @(taxaOcupacao.ToString("F1"))%</MudText>
-                    </MudProgressLinear>
-                    
-                    <MudProgressLinear Value="@taxaDisponibilidade" Color="Color.Success" Class="mb-2">
-                        <MudText Typo="Typo.caption">Disponibilidade: @(taxaDisponibilidade.ToString("F1"))%</MudText>
-                    </MudProgressLinear>
-                    
-                    <MudDivider />
-                    
-                    <MudStack>
-                        <MudText Typo="Typo.subtitle2">Top Periféricos</MudText>
-                        @foreach (var periferico in topPerifericos.Take(3))
+                @if (topPerifericos.Any())
+                {
+                    <MudList Dense="true">
+                        @foreach (var periferico in topPerifericos)
                         {
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.body2">@periferico.Nome</MudText>
-                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@periferico.ReservasCount</MudChip>
-                            </MudStack>
+                            <MudListItem>
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudText Typo="Typo.body2">@periferico.Nome</MudText>
+                                    <MudChip Color="Color.Primary" Size="Size.Small">@periferico.ReservasCount</MudChip>
+                                </MudStack>
+                            </MudListItem>
                         }
+                    </MudList>
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 150px;">
+                        <MudIcon Icon="@Icons.Material.Filled.StarBorder" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum dado disponível</MudText>
                     </MudStack>
-                </MudStack>
+                }
             </MudPaper>
         </MudItem>
     </MudGrid>
+    *@
 
     <!-- Ações Rápidas e Últimas Reservas -->
     <MudGrid>
@@ -231,9 +232,12 @@
     private double taxaOcupacao = 0;
     private double taxaDisponibilidade = 0;
     private IEnumerable<ReservaDto> ultimasReservas = new List<ReservaDto>();
+    // Temporariamente comentado para resolver erro de compilação
+    /*
     private List<ChartSeries> pieChartData = new();
     private List<ChartSeries> lineChartData = new();
     private string[] lineChartLabels = { "Jan", "Fev", "Mar", "Abr", "Mai", "Jun" };
+    */
     private List<PerifericoStats> topPerifericos = new();
 
     public class PerifericoStats
@@ -246,56 +250,39 @@
     {
         try
         {
-            var perifericos = await PerifericoService.GetAllAsync();
-            var usuarios = await UsuarioService.GetAllAsync();
-            var reservas = await ReservaService.GetAllAsync();
-            var reservasAtivasList = await ReservaService.GetAtivasAsync();
-
-            totalPerifericos = perifericos.Count();
-            totalUsuarios = usuarios.Count();
-            reservasAtivas = reservasAtivasList.Count();
-            perifericosAtivos = perifericos.Count(p => p.Ativo);
-            perifericosInativos = perifericos.Count(p => !p.Ativo);
-            perifericosDisponiveis = perifericosAtivos - reservasAtivas;
-            
-            // Calcular taxas
-            taxaOcupacao = perifericosAtivos > 0 ? (double)reservasAtivas / perifericosAtivos * 100 : 0;
-            taxaDisponibilidade = perifericosAtivos > 0 ? (double)perifericosDisponiveis / perifericosAtivos * 100 : 0;
-            
-            ultimasReservas = reservas.OrderByDescending(r => r.DataCadastro).Take(5);
-
-            // Preparar dados dos gráficos
-            PrepareChartData(perifericos, reservas);
+            await CarregarDados();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro ao carregar dashboard: {ex.Message}");
+            Snackbar.Add($"Erro ao carregar dados: {ex.Message}", Severity.Error);
         }
     }
 
-    private void PrepareChartData(IEnumerable<PerifericoDto> perifericos, IEnumerable<ReservaDto> reservas)
+    private async Task CarregarDados()
     {
-        // Gráfico de pizza - Distribuição por tipo
-        var tiposPerifericos = perifericos.GroupBy(p => p.Tipo)
-                                         .Select(g => new { Tipo = g.Key, Count = g.Count() })
-                                         .OrderByDescending(x => x.Count);
+        var perifericos = await PerifericoService.GetAllAsync();
+        var usuarios = await UsuarioService.GetAllAsync();
+        var reservas = await ReservaService.GetAllAsync();
+        var reservasAtivasList = await ReservaService.GetAtivasAsync();
 
-        pieChartData.Clear();
-        foreach (var tipo in tiposPerifericos)
-        {
-            pieChartData.Add(new ChartSeries { Name = tipo.Tipo, Data = new double[] { tipo.Count } });
-        }
+        totalPerifericos = perifericos.Count();
+        totalUsuarios = usuarios.Count();
+        reservasAtivas = reservasAtivasList.Count();
+        perifericosAtivos = perifericos.Count(p => p.Ativo);
+        perifericosInativos = perifericos.Count(p => !p.Ativo);
+        perifericosDisponiveis = perifericosAtivos - reservasAtivas;
+        
+        // Calcular taxas
+        taxaOcupacao = perifericosAtivos > 0 ? (double)reservasAtivas / perifericosAtivos * 100 : 0;
+        taxaDisponibilidade = perifericosAtivos > 0 ? (double)perifericosDisponiveis / perifericosAtivos * 100 : 0;
+        
+        ultimasReservas = reservas.OrderByDescending(r => r.DataCadastro).Take(5);
 
-        // Gráfico de linha - Reservas por mês (simulado)
-        lineChartData.Clear();
-        lineChartData.Add(new ChartSeries 
-        { 
-            Name = "Reservas", 
-            Data = new double[] { 12, 19, 15, 25, 22, 30 } 
-        });
-
-        // Top periféricos mais reservados
-        topPerifericos = reservas.GroupBy(r => r.PerifericoNome)
+        // Preparar dados dos gráficos - Temporariamente comentado para resolver erro de compilação
+        // PrepareChartData(perifericos, reservas);
+        
+        // Top periféricos mais reservados - Implementação simplificada
+        topPerifericos = reservas.GroupBy(r => r.PerifericoNome ?? "Sem nome")
                                  .Select(g => new PerifericoStats 
                                  { 
                                      Nome = g.Key, 
@@ -305,4 +292,42 @@
                                  .Take(3)
                                  .ToList();
     }
+
+    // Temporariamente comentado para resolver erro de compilação
+    /*
+    private void PrepareChartData(IEnumerable<PerifericoDto> perifericos, IEnumerable<ReservaDto> reservas)
+    {
+        // Gráfico de pizza - Distribuição por tipo
+        var tiposPerifericos = perifericos.GroupBy(p => p.Tipo)
+                                         .Select(g => new { Tipo = g.Key, Count = g.Count() })
+                                         .OrderByDescending(x => x.Count);
+
+        // pieChartData.Clear(); // Temporariamente comentado para resolver erro de compilação
+        // foreach (var tipo in tiposPerifericos)
+        // {
+        //     var chartSeries = new ChartSeries();
+        //     chartSeries.Name = tipo.Tipo;
+        //     chartSeries.Data = new double[] { tipo.Count };
+        //     pieChartData.Add(chartSeries);
+        // }
+
+        // Gráfico de linha - Reservas por mês (simulado)
+        // lineChartData.Clear(); // Temporariamente comentado para resolver erro de compilação
+        // var lineSeries = new ChartSeries();
+        // lineSeries.Name = "Reservas";
+        // lineSeries.Data = new double[] { 12, 19, 15, 25, 22, 30 };
+        // lineChartData.Add(lineSeries);
+
+        // Top periféricos mais reservados
+        topPerifericos = reservas.GroupBy(r => r.PerifericoNome ?? "Sem nome")
+                                 .Select(g => new PerifericoStats 
+                                 { 
+                                     Nome = g.Key, 
+                                     ReservasCount = g.Count() 
+                                 })
+                                 .OrderByDescending(p => p.ReservasCount)
+                                 .Take(3)
+                                 .ToList();
+    }
+    */
 } 

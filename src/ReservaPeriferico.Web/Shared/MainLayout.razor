@@ -10,30 +10,58 @@
 <MudLayout>
     <MudAppBar Elevation="2" Color="Color.Primary" Dense="true">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
-                       OnClick="@((e) => DrawerToggle())" />
+                       OnClick="@((e) => DrawerToggle())" 
+                       Style="@(!ShouldShowMenu ? "display: none;" : "")" />
         <MudText Typo="Typo.h5" Class="ml-3 font-weight-bold" Color="Color.Inherit">
             <MudIcon Icon="@Icons.Material.Filled.Devices" Class="mr-2" />Reserva de Periféricos
         </MudText>
         <MudSpacer />
     </MudAppBar>
     
-    <MudDrawer Open="_drawerOpen" Elevation="2" Color="Color.Default" Variant="DrawerVariant.Responsive">
-        <NavMenu />
-    </MudDrawer>
+    @if (ShouldShowMenu)
+    {
+        <MudDrawer Open="_drawerOpen" Elevation="2" Color="Color.Default" Variant="DrawerVariant.Responsive">
+            <NavMenu />
+        </MudDrawer>
+    }
+    
+
     
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pt-6 pb-6">
             @Body
         </MudContainer>
-        <MudDivider Class="my-0" />
-        <footer class="text-center py-2" style="color: #00dbff; font-size: 0.95rem;">
-            © @(DateTime.Now.Year) Reserva de Periféricos — Sistema interno
-        </footer>
+        @if (ShouldShowMenu)
+        {
+            <MudDivider Class="my-0" />
+            <footer class="text-center py-2" style="color: #00dbff; font-size: 0.95rem;">
+                © @(DateTime.Now.Year) Reserva de Periféricos — Sistema interno
+            </footer>
+        }
     </MudMainContent>
 </MudLayout>
 
 @code {
     private bool _drawerOpen = true;
+    private bool IsLoginPage => Navigation.Uri.EndsWith("/") || Navigation.Uri.EndsWith("/login");
+    private bool ShouldShowMenu => !IsLoginPage; // Simplificado: sempre mostrar menu exceto na página de login
+
+    protected override void OnInitialized()
+    {
+        // Inscrever para mudanças de navegação
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        // Cancelar inscrições
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
 
     private void DrawerToggle()
     {
