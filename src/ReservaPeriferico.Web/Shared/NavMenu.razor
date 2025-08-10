@@ -1,6 +1,21 @@
-﻿<MudNavMenu Class="mt-4">
+﻿
+
+<MudNavMenu Class="mt-4">
+    <!-- Informações do Usuário -->
+    <MudPaper Class="ma-4 pa-3" Elevation="1" Style="background: var(--mud-palette-primary-lighten);">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
+                Administrador
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                admin@sistema.com
+            </MudText>
+        </MudStack>
+    </MudPaper>
+
     <MudText Typo="Typo.subtitle2" Class="ml-4 mb-2" Color="Color.Primary">Menu</MudText>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+    <MudNavLink Href="dashboard" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
         Dashboard
     </MudNavLink>
     <MudNavLink Href="equipes" Icon="@Icons.Material.Filled.Groups">
@@ -12,8 +27,13 @@
     <MudNavLink Href="reserva" Icon="@Icons.Material.Filled.Event">
         Reservas
     </MudNavLink>
-    <MudNavLink Href="usuarios" Icon="@Icons.Material.Filled.People">
-        Usuários
-    </MudNavLink>
+    
     <MudDivider Class="my-2" />
+    
+    <!-- Botão de Logout -->
+    <MudNavLink Href="logout" Icon="@Icons.Material.Filled.Logout" Color="Color.Error">
+        Sair
+    </MudNavLink>
 </MudNavMenu>
+
+

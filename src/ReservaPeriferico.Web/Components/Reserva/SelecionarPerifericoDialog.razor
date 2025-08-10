@@ -73,13 +73,11 @@
 
     private async Task SelecionarPeriferico(PerifericoDto periferico)
     {
-        Console.WriteLine($"SelecionarPeriferico chamado para: {periferico.Nome}");
         await OnPerifericoSelecionado.InvokeAsync(periferico);
     }
 
     private async Task FecharDialog()
     {
-        Console.WriteLine("FecharDialog chamado");
         await OnCancelar.InvokeAsync();
     }
 }

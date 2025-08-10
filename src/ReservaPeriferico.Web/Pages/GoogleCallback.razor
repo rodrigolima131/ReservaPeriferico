@@ -1,0 +1,72 @@
+@page "/signin-google"
+@using Microsoft.AspNetCore.Authentication
+@using System.Security.Claims
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Application.Interfaces
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IUsuarioService UsuarioService
+@inject IHttpContextAccessor HttpContextAccessor
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var user = HttpContextAccessor.HttpContext?.User;
+            // Verificar se o usuário está autenticado
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                // Extrair informações do Google
+                var email = user.FindFirst(ClaimTypes.Email)?.Value;
+                var name = user.FindFirst(ClaimTypes.Name)?.Value;
+                var givenName = user.FindFirst(ClaimTypes.GivenName)?.Value;
+                var surname = user.FindFirst(ClaimTypes.Surname)?.Value;
+                var picture = user.FindFirst("picture")?.Value;
+
+                if (!string.IsNullOrEmpty(email))
+                {
+                    // Verificar se o usuário já existe no banco
+                    var usuarios = await UsuarioService.GetAllAsync();
+                    var usuarioExistente = usuarios.FirstOrDefault(u => u.Email == email);
+
+                    if (usuarioExistente == null)
+                    {
+                        // Criar novo usuário
+                        var novoUsuario = new UsuarioDto
+                        {
+                            Nome = name ?? $"{givenName} {surname}".Trim(),
+                            Email = email,
+                            Matricula = email.Split('@')[0], // Usar parte do email como matrícula
+                            Ativo = true,
+                            DataCadastro = DateTime.Now
+                        };
+
+                        await UsuarioService.CreateAsync(novoUsuario);
+                        Snackbar.Add("Usuário criado com sucesso!", Severity.Success);
+                    }
+                    else
+                    {
+                        // Atualizar informações do usuário existente
+                        usuarioExistente.Nome = name ?? $"{givenName} {surname}".Trim();
+                        usuarioExistente.Ativo = true;
+                        await UsuarioService.UpdateAsync(usuarioExistente.Id, usuarioExistente);
+                    }
+                }
+
+                Snackbar.Add("Login realizado com sucesso!", Severity.Success);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                Snackbar.Add("Falha na autenticação", Severity.Error);
+                Navigation.NavigateTo("/login");
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao processar login: {ex.Message}", Severity.Error);
+            Navigation.NavigateTo("/login");
+        }
+    }
+} 

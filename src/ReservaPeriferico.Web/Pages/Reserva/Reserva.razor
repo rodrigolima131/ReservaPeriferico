@@ -1,4 +1,5 @@
 @page "/reserva"
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using ReservaPeriferico.Application.DTOs
 @using ReservaPeriferico.Application.Interfaces
@@ -217,6 +218,12 @@
         try
         {
             // Validar se o periférico ainda está disponível
+            if (!dataRetirada.HasValue || !dataDevolucao.HasValue)
+            {
+                Snackbar.Add("Por favor, selecione as datas de retirada e devolução.", Severity.Warning);
+                return;
+            }
+
             if (!await ReservaService.PerifericoDisponivelAsync(
                 reserva.PerifericoId, dataRetirada.Value, dataDevolucao.Value))
             {

@@ -1,0 +1,179 @@
+@page "/"
+@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Google
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Security.Claims
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JSRuntime
+
+
+<PageTitle>Login - Sistema de Reserva</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Class="pa-6" Elevation="3">
+        <!-- Header -->
+        <MudStack AlignItems="AlignItems.Center" Class="mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h4">Login</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Acesse o sistema de reserva de periféricos</MudText>
+        </MudStack>
+
+        <!-- Opções de Login -->
+        <MudStack Spacing="4">
+            <!-- Login Manual -->
+            <MudPaper Class="pa-4" Elevation="1" Style="border: 1px solid var(--mud-palette-primary);">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+                        Login Manual
+                    </MudText>
+                    
+                    <EditForm Model="loginModel" OnSubmit="LoginManual">
+                        <DataAnnotationsValidator />
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="loginModel.Email" 
+                                         Label="Usuário" 
+                                         Variant="Variant.Outlined"
+                                         Placeholder="admin"
+                                         Required />
+                            
+                            <MudTextField @bind-Value="loginModel.Password" 
+                                         Label="Senha" 
+                                         Variant="Variant.Outlined"
+                                         InputType="InputType.Password"
+                                         Placeholder="123"
+                                         Required />
+
+                            <MudButton ButtonType="ButtonType.Submit" 
+                                       Variant="Variant.Filled" 
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       Disabled="@processando">
+                                @if (processando)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Entrar
+                            </MudButton>
+                        </MudStack>
+                    </EditForm>
+                </MudStack>
+            </MudPaper>
+
+            <MudDivider>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">ou</MudText>
+            </MudDivider>
+
+            <!-- Login Google -->
+            <MudPaper Class="pa-4" Elevation="1" Style="border: 1px solid var(--mud-palette-secondary);">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+                        Login Corporativo
+                    </MudText>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               Size="Size.Large"
+                               OnClick="LoginComGoogle"
+                               StartIcon="@Icons.Material.Filled.AccountCircle"
+                               FullWidth="true"
+                               Disabled="true">
+                        Entrar com Google
+                    </MudButton>
+                    
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                        Configuração pendente
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        </MudStack>
+
+        <!-- Informações -->
+        <MudStack Class="mt-6">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                <MudText Typo="Typo.body2">
+                    <strong>Credenciais de teste:</strong> Usuário: <strong>admin</strong> | Senha: <strong>123</strong>
+                </MudText>
+            </MudAlert>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool processando = false;
+
+    private async Task LoginComGoogle()
+    {
+        try
+        {
+            processando = true;
+            
+            // Redirecionar diretamente para o endpoint de autenticação do Google
+            var returnUrl = Uri.EscapeDataString("/dashboard");
+            var googleAuthUrl = $"/signin-google?returnUrl={returnUrl}";
+            
+            // Usar JavaScript para redirecionar
+            await JSRuntime.InvokeVoidAsync("window.location.href", googleAuthUrl);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao fazer login: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            processando = false;
+        }
+    }
+
+    private async Task LoginManual(EditContext context)
+    {
+        try
+        {
+            processando = true;
+
+            // Validação básica
+            if (string.IsNullOrWhiteSpace(loginModel.Email) || string.IsNullOrWhiteSpace(loginModel.Password))
+            {
+                Snackbar.Add("Por favor, preencha email e senha.", Severity.Warning);
+                return;
+            }
+
+            // Verificar credenciais fixas (provisório)
+            if (loginModel.Email.ToLower() == "admin" && loginModel.Password == "123")
+            {
+                // Mostrar mensagem de sucesso
+                Snackbar.Add("Login realizado com sucesso! Redirecionando...", Severity.Success);
+                
+                // Aguardar um pouco para a mensagem ser exibida
+                await Task.Delay(1500);
+                
+                // Redirecionar diretamente para dashboard
+                Navigation.NavigateTo("/dashboard", true);
+            }
+            else
+            {
+                Snackbar.Add("Credenciais inválidas. Use admin/123 ou faça login com Google.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao fazer login: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            processando = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+} 
