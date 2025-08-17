@@ -30,6 +30,14 @@ namespace ReservaPeriferico.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<UsuarioEquipe?> GetByUsuarioAndEquipeAsync(int usuarioId, int equipeId)
+        {
+            return await _context.UsuarioEquipes
+                .Include(ue => ue.Usuario)
+                .Include(ue => ue.Equipe)
+                .FirstOrDefaultAsync(ue => ue.UsuarioId == usuarioId && ue.EquipeId == equipeId);
+        }
+
         public async Task AddMembroAsync(int equipeId, int usuarioId, bool isAdministrador = false)
         {
             var usuarioEquipe = new UsuarioEquipe

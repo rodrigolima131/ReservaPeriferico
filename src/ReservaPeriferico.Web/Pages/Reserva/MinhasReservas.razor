@@ -1,0 +1,263 @@
+@page "/minhas-reservas"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Core.Enums
+@using ReservaPeriferico.Web.Components
+@inject IReservaService ReservaService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Minhas Reservas - Sistema de Reserva</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header da página -->
+    <MudPaper Class="pa-4 mb-4" Style="background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-primary-darken) 100%); color: white;">
+        <MudText Typo="Typo.h4" Class="mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Event" Class="mr-3" />
+            Minhas Reservas
+        </MudText>
+        <MudText Typo="Typo.body1" Class="opacity-75">
+            Visualize e gerencie suas reservas de periféricos
+        </MudText>
+    </MudPaper>
+
+    <!-- Filtros -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudSelect TValue="StatusReserva?" Label="Status" @bind-Value="filtroStatus" Clearable="true">
+                    <MudSelectItem T="StatusReserva?" Value="null"></MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Pendente">Pendente</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Aprovada">Aprovada</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Rejeitada">Rejeitada</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Cancelada">Cancelada</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.EmUso">Em Uso</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Devolvida">Devolvida</MudSelectItem>
+                    <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Expirada">Expirada</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudTextField TValue="string" Label="Periférico" @bind-Value="filtroPeriferico" Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AplicarFiltros" 
+                           StartIcon="@Icons.Material.Filled.FilterList" Class="mt-4">
+                    Aplicar Filtros
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Tabela de Reservas -->
+    <MudPaper Class="pa-4" Elevation="3">
+        <MudText Typo="Typo.h6" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
+            Reservas
+        </MudText>
+
+        @if (carregando)
+        {
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (!reservas.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                Nenhuma reserva encontrada com os filtros aplicados.
+            </MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@reservasFiltradas" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" 
+                      Loading="@carregando" LoadingProgressColor="Color.Primary">
+                <HeaderContent>
+                    <MudTh>ID</MudTh>
+                    <MudTh>Periférico</MudTh>
+                    <MudTh>Equipe</MudTh>
+                    <MudTh>Data Início</MudTh>
+                    <MudTh>Data Fim</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Observações</MudTh>
+                    <MudTh>Ações</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID">@context.Id</MudTd>
+                    <MudTd DataLabel="Periférico">@context.PerifericoNome</MudTd>
+                    <MudTd DataLabel="Equipe">@context.EquipeNome</MudTd>
+                    <MudTd DataLabel="Data Início">@context.DataInicio.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Data Fim">
+                        @(context.DataFim?.ToString("dd/MM/yyyy") ?? "Não definido")
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                            @GetStatusText(context.Status)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Observações">
+                        <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                            @(context.Observacoes ?? "Sem observações")
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Ações">
+                        <MudStack Row="true" Spacing="1">
+                            @if (context.Status == StatusReserva.Pendente)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Warning" Size="Size.Small"
+                                               OnClick="() => CancelarReserva(context)" Title="Cancelar" />
+                            }
+                            <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small"
+                                           OnClick="() => VerDetalhes(context)" Title="Ver Detalhes" />
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+    </MudPaper>
+
+    <!-- Botão para nova reserva -->
+    <MudPaper Class="pa-4 mt-4" Elevation="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NovaReserva" 
+                   StartIcon="@Icons.Material.Filled.Add" FullWidth="true">
+            Solicitar Nova Reserva
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ReservaDto> reservas = new();
+    private List<ReservaDto> reservasFiltradas = new();
+    private bool carregando = false;
+    
+    // Filtros
+    private StatusReserva? filtroStatus;
+    private string filtroPeriferico = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarReservas();
+    }
+
+    private async Task CarregarReservas()
+    {
+        carregando = true;
+        try
+        {
+            // Usuário padrão para testes (deve ser substituído pela autenticação real)
+            int usuarioId = 1;
+            
+            var minhasReservas = await ReservaService.GetByUsuarioAsync(usuarioId);
+            reservas = minhasReservas.ToList();
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar reservas: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            carregando = false;
+        }
+    }
+
+    private void AplicarFiltros()
+    {
+        var query = reservas.AsQueryable();
+
+        if (filtroStatus.HasValue)
+        {
+            query = query.Where(r => r.Status == filtroStatus.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filtroPeriferico))
+        {
+            query = query.Where(r => 
+                r.PerifericoNome.Contains(filtroPeriferico, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        reservasFiltradas = query.ToList();
+    }
+
+    private async Task CancelarReserva(ReservaDto reserva)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Cancelar Reserva",
+            ["Content"] = "Tem certeza que deseja cancelar esta reserva?",
+            ["ConfirmText"] = "Sim, Cancelar",
+            ["CancelText"] = "Não"
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Cancelar Reserva", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                // Usuário padrão para testes (deve ser substituído pela autenticação real)
+                int usuarioId = 1;
+
+                await ReservaService.CancelarReservaAsync(reserva.Id, usuarioId);
+                Snackbar.Add("Reserva cancelada com sucesso!", Severity.Success);
+                await CarregarReservas();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Erro ao cancelar reserva: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task VerDetalhes(ReservaDto reserva)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Reserva"] = reserva
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<DetalhesReservaDialog>("Detalhes da Reserva", parameters, options);
+        await dialog.Result;
+    }
+
+    private void NovaReserva()
+    {
+        Navigation.NavigateTo("/reserva");
+    }
+
+    private Color GetStatusColor(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => Color.Warning,
+            StatusReserva.Aprovada => Color.Success,
+            StatusReserva.Rejeitada => Color.Error,
+            StatusReserva.Cancelada => Color.Default,
+            StatusReserva.EmUso => Color.Info,
+            StatusReserva.Devolvida => Color.Secondary,
+            StatusReserva.Expirada => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => "Pendente",
+            StatusReserva.Aprovada => "Aprovada",
+            StatusReserva.Rejeitada => "Rejeitada",
+            StatusReserva.Cancelada => "Cancelada",
+            StatusReserva.EmUso => "Em Uso",
+            StatusReserva.Devolvida => "Devolvida",
+            StatusReserva.Expirada => "Expirada",
+            _ => "Desconhecido"
+        };
+    }
+}

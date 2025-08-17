@@ -1,0 +1,34 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">@Title</MudText>
+        <MudText Typo="Typo.body1" Class="mb-4">@Content</MudText>
+        
+        <MudTextField T="string" @bind-Value="inputValue" Label="@InputLabel" 
+                      Placeholder="@InputPlaceholder" Variant="Variant.Outlined" 
+                      Lines="3" MaxLength="500" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="string.IsNullOrWhiteSpace(inputValue)">
+            Confirmar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Content { get; set; } = string.Empty;
+    [Parameter] public InputType InputType { get; set; } = InputType.Text;
+    [Parameter] public string InputLabel { get; set; } = string.Empty;
+    [Parameter] public string InputPlaceholder { get; set; } = string.Empty;
+    
+    private string inputValue = string.Empty;
+    
+    void Cancel() => MudDialog.Cancel();
+    
+    void Submit() => MudDialog.Close(DialogResult.Ok(inputValue));
+}

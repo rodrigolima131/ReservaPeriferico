@@ -11,6 +11,11 @@ namespace ReservaPeriferico.Core.Entities
         public int UsuarioAdministradorId { get; set; }
         public DateTime DataCadastro { get; set; }
         public DateTime? DataAtualizacao { get; set; }
+        
+        // Relacionamentos
         public ICollection<UsuarioEquipe> Membros { get; set; } = new List<UsuarioEquipe>();
+        public virtual ICollection<Periferico> Perifericos { get; set; } = new List<Periferico>();
+        public virtual ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
+        public virtual Usuario UsuarioAdministrador { get; set; } = null!;
     }
 } 

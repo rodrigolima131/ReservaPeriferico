@@ -30,6 +30,8 @@ public class PerifericoDto
     
     public bool Ativo { get; set; } = true;
     
+    public int EquipeId { get; set; } = 1; // Equipe padrão (hardcoded por enquanto)
+    
     public DateTime DataCadastro { get; set; }
     
     public DateTime? DataAtualizacao { get; set; }

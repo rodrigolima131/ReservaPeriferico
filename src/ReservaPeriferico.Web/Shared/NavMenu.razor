@@ -4,11 +4,11 @@
     <!-- Informações do Usuário -->
     <MudPaper Class="ma-4 pa-3" Elevation="1" Style="background: var(--mud-palette-primary-lighten);">
         <MudStack Spacing="2">
-            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+            <MudText Typo="Typo.subtitle2" Style="color: white;">
                 <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
                 Administrador
             </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
+            <MudText Typo="Typo.caption"Style="color: white;">
                 admin@sistema.com
             </MudText>
         </MudStack>
@@ -24,8 +24,16 @@
     <MudNavLink Href="perifericos" Icon="@Icons.Material.Filled.Computer">
         Periféricos
     </MudNavLink>
-    <MudNavLink Href="reserva" Icon="@Icons.Material.Filled.Event">
-        Reservas
+    
+    <MudText Typo="Typo.subtitle2" Class="ml-4 mb-2 mt-4" Color="Color.Primary">Reservas</MudText>
+    <MudNavLink Href="reserva" Icon="@Icons.Material.Filled.Add">
+        Nova Reserva
+    </MudNavLink>
+    <MudNavLink Href="minhas-reservas" Icon="@Icons.Material.Filled.Event">
+        Minhas Reservas
+    </MudNavLink>
+    <MudNavLink Href="gerenciar-reservas" Icon="@Icons.Material.Filled.ManageAccounts">
+        Gerenciar Reservas
     </MudNavLink>
     
     <MudDivider Class="my-2" />

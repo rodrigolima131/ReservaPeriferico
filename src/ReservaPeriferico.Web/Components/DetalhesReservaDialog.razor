@@ -1,0 +1,130 @@
+@using MudBlazor
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Core.Enums
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Detalhes da Reserva #@Reserva.Id</MudText>
+        
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Usuário</MudText>
+                <MudText Typo="Typo.body1">@Reserva.UsuarioNome</MudText>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Periférico</MudText>
+                <MudText Typo="Typo.body1">@Reserva.PerifericoNome</MudText>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Equipe</MudText>
+                <MudText Typo="Typo.body1">@Reserva.EquipeNome</MudText>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Status</MudText>
+                <MudChip T="string" Color="@GetStatusColor(Reserva.Status)" Size="Size.Small">
+                    @GetStatusText(Reserva.Status)
+                </MudChip>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Início</MudText>
+                <MudText Typo="Typo.body1">@Reserva.DataInicio.ToString("dd/MM/yyyy HH:mm")</MudText>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Fim</MudText>
+                <MudText Typo="Typo.body1">
+                    @(Reserva.DataFim?.ToString("dd/MM/yyyy") ?? "Não definido")
+                </MudText>
+            </MudItem>
+            
+            @if (!string.IsNullOrWhiteSpace(Reserva.Observacoes))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Observações</MudText>
+                    <MudText Typo="Typo.body1">@Reserva.Observacoes</MudText>
+                </MudItem>
+            }
+            
+            @if (Reserva.UsuarioAprovadorId.HasValue)
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Aprovador</MudText>
+                    <MudText Typo="Typo.body1">@Reserva.UsuarioAprovadorNome</MudText>
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Aprovação</MudText>
+                    <MudText Typo="Typo.body1">
+                        @(Reserva.DataAprovacao?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
+                    </MudText>
+                </MudItem>
+            }
+            
+            @if (!string.IsNullOrWhiteSpace(Reserva.MotivoRejeicao))
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Error">Motivo da Rejeição</MudText>
+                    <MudText Typo="Typo.body1">@Reserva.MotivoRejeicao</MudText>
+                </MudItem>
+            }
+            
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Cadastro</MudText>
+                <MudText Typo="Typo.body1">@Reserva.DataCadastro.ToString("dd/MM/yyyy HH:mm")</MudText>
+            </MudItem>
+            
+            @if (Reserva.DataAtualizacao.HasValue)
+            {
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Última Atualização</MudText>
+                    <MudText Typo="Typo.body1">@Reserva.DataAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")</MudText>
+                </MudItem>
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] public ReservaDto Reserva { get; set; } = default!;
+    
+    void Cancel() => MudDialog.Cancel();
+    
+    private Color GetStatusColor(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => Color.Warning,
+            StatusReserva.Aprovada => Color.Success,
+            StatusReserva.Rejeitada => Color.Error,
+            StatusReserva.Cancelada => Color.Default,
+            StatusReserva.EmUso => Color.Info,
+            StatusReserva.Devolvida => Color.Secondary,
+            StatusReserva.Expirada => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => "Pendente",
+            StatusReserva.Aprovada => "Aprovada",
+            StatusReserva.Rejeitada => "Rejeitada",
+            StatusReserva.Cancelada => "Cancelada",
+            StatusReserva.EmUso => "Em Uso",
+            StatusReserva.Devolvida => "Devolvida",
+            StatusReserva.Expirada => "Expirada",
+            _ => "Desconhecido"
+        };
+    }
+}
