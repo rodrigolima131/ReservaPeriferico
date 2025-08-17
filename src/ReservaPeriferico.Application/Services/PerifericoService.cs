@@ -59,6 +59,7 @@ public class PerifericoService : IPerifericoService
         existingPeriferico.Modelo = perifericoDto.Modelo;
         existingPeriferico.NumeroSerie = perifericoDto.NumeroSerie;
         existingPeriferico.Ativo = perifericoDto.Ativo;
+        existingPeriferico.EquipeId = perifericoDto.EquipeId;
         existingPeriferico.DataAtualizacao = DateTime.UtcNow;
         
         var updatedPeriferico = await _perifericoRepository.UpdateAsync(existingPeriferico);
@@ -92,6 +93,7 @@ public class PerifericoService : IPerifericoService
             Modelo = periferico.Modelo,
             NumeroSerie = periferico.NumeroSerie,
             Ativo = periferico.Ativo,
+            EquipeId = periferico.EquipeId,
             DataCadastro = periferico.DataCadastro,
             DataAtualizacao = periferico.DataAtualizacao
         };
@@ -109,6 +111,7 @@ public class PerifericoService : IPerifericoService
             Modelo = dto.Modelo,
             NumeroSerie = dto.NumeroSerie,
             Ativo = dto.Ativo,
+            EquipeId = dto.EquipeId,
             DataCadastro = dto.Id > 0 ? dto.DataCadastro : DateTime.UtcNow,
             DataAtualizacao = dto.Id > 0 ? DateTime.UtcNow : dto.DataAtualizacao
         };

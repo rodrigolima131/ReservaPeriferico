@@ -57,13 +57,13 @@
         </MudItem>
         
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="3" Style="border-left: 4px solid var(--mud-palette-success);">
+            <MudPaper Class="pa-4" Elevation="3" Style="border-left: 4px solid var(--mud-palette.success);">
                 <MudStack>
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.h6" Color="Color.Success">Reservas Ativas</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Success">Reservas Aprovadas</MudText>
                         <MudIcon Icon="@Icons.Material.Filled.Event" Color="Color.Success" />
                     </MudStack>
-                    <MudText Typo="Typo.h3" Color="Color.Success">@reservasAtivas</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Success">@reservasAprovadas</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @(taxaOcupacao.ToString("F1"))% de ocupação
                     </MudText>
@@ -72,76 +72,20 @@
         </MudItem>
         
         <MudItem xs="12" sm="6" md="3">
-            <MudPaper Class="pa-4" Elevation="3" Style="border-left: 4px solid var(--mud-palette-info);">
+            <MudPaper Class="pa-4" Elevation="3" Style="border-left: 4px solid var(--mud-palette.warning);">
                 <MudStack>
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.h6" Color="Color.Info">Disponíveis</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Info" />
+                        <MudText Typo="Typo.h6" Color="Color.Warning">Reservas Pendentes</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" />
                     </MudStack>
-                    <MudText Typo="Typo.h3" Color="Color.Info">@perifericosDisponiveis</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Warning">@reservasPendentes</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Periféricos livres para reserva
+                        Aguardando aprovação
                     </MudText>
                 </MudStack>
             </MudPaper>
         </MudItem>
     </MudGrid>
-
-    <!-- Gráficos e Estatísticas -->
-    @* Temporariamente comentado para resolver erro de compilação
-    <MudGrid Class="mb-6">
-        <MudItem xs="12" md="8">
-            <MudPaper Class="pa-4" Elevation="3">
-                <MudText Typo="Typo.h6" Class="mb-4">
-                    <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-2" />
-                    Estatísticas de Reservas
-                </MudText>
-                
-                <MudGrid>
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.subtitle1" Class="mb-3">Distribuição por Tipo</MudText>
-                        <MudChart ChartType="ChartType.Pie" ChartSeries="@pieChartData" Width="100%" Height="200px" />
-                    </MudItem>
-                    <MudItem xs="12" md="6">
-                        <MudText Typo="Typo.subtitle1" Class="mb-3">Reservas por Mês</MudText>
-                        <MudChart ChartType="ChartType.Line" ChartSeries="@lineChartData" XAxisLabels="@lineChartLabels" Width="100%" Height="200px" />
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudPaper Class="pa-4" Elevation="3">
-                <MudText Typo="Typo.h6" Class="mb-4">
-                    <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
-                    Top Periféricos
-                </MudText>
-                
-                @if (topPerifericos.Any())
-                {
-                    <MudList Dense="true">
-                        @foreach (var periferico in topPerifericos)
-                        {
-                            <MudListItem>
-                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.body2">@periferico.Nome</MudText>
-                                    <MudChip Color="Color.Primary" Size="Size.Small">@periferico.ReservasCount</MudChip>
-                                </MudStack>
-                            </MudListItem>
-                        }
-                    </MudList>
-                }
-                else
-                {
-                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 150px;">
-                        <MudIcon Icon="@Icons.Material.Filled.StarBorder" Color="Color.Secondary" Size="Size.Large" />
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum dado disponível</MudText>
-                    </MudStack>
-                }
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
-    *@
 
     <!-- Ações Rápidas e Últimas Reservas -->
     <MudGrid>
@@ -154,27 +98,27 @@
                 
                 <MudStack Spacing="3">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Filled.Computer"
-                               OnClick="@(() => Navigation.NavigateTo("/perifericos"))" FullWidth="true">
-                        Gerenciar Periféricos
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="@(() => Navigation.NavigateTo("/reserva"))" FullWidth="true">
+                        Solicitar Nova Reserva
                     </MudButton>
                     
                     <MudButton Variant="Variant.Filled" Color="Color.Secondary" 
-                               StartIcon="@Icons.Material.Filled.People"
-                               OnClick="@(() => Navigation.NavigateTo("/usuarios"))" FullWidth="true">
-                        Gerenciar Usuários
+                               StartIcon="@Icons.Material.Filled.Event"
+                               OnClick="@(() => Navigation.NavigateTo("/minhas-reservas"))" FullWidth="true">
+                        Minhas Reservas
                     </MudButton>
                     
-                    <MudButton Variant="Variant.Filled" Color="Color.Success" 
-                               StartIcon="@Icons.Material.Filled.Event"
-                               OnClick="@(() => Navigation.NavigateTo("/reservas"))" FullWidth="true">
+                    <MudButton Variant="Variant.Filled" Color="Color.Warning" 
+                               StartIcon="@Icons.Material.Filled.ManageAccounts"
+                               OnClick="@(() => Navigation.NavigateTo("/gerenciar-reservas"))" FullWidth="true">
                         Gerenciar Reservas
                     </MudButton>
                     
                     <MudButton Variant="Variant.Outlined" Color="Color.Info" 
-                               StartIcon="@Icons.Material.Filled.Add"
+                               StartIcon="@Icons.Material.Filled.Computer"
                                OnClick="@(() => Navigation.NavigateTo("/perifericos"))" FullWidth="true">
-                        Nova Reserva
+                        Gerenciar Periféricos
                     </MudButton>
                 </MudStack>
             </MudPaper>
@@ -198,12 +142,12 @@
                                         <MudText Typo="Typo.body2" Class="font-weight-medium">
                                             @reserva.PerifericoNome
                                         </MudText>
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">
-                                            @reserva.DataInicio.ToString("dd/MM")
+                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(reserva.Status)">
+                                            @GetStatusText(reserva.Status)
                                         </MudChip>
                                     </MudStack>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        @reserva.UsuarioNome • @reserva.DataInicio.ToString("HH:mm")
+                                        @reserva.UsuarioNome • @reserva.DataInicio.ToString("dd/MM")
                                     </MudText>
                                 </MudStack>
                             </MudListItem>
@@ -225,26 +169,13 @@
 @code {
     private int totalPerifericos = 0;
     private int totalUsuarios = 0;
-    private int reservasAtivas = 0;
+    private int reservasAprovadas = 0;
+    private int reservasPendentes = 0;
     private int perifericosDisponiveis = 0;
     private int perifericosAtivos = 0;
     private int perifericosInativos = 0;
     private double taxaOcupacao = 0;
-    private double taxaDisponibilidade = 0;
     private IEnumerable<ReservaDto> ultimasReservas = new List<ReservaDto>();
-    // Temporariamente comentado para resolver erro de compilação
-    /*
-    private List<ChartSeries> pieChartData = new();
-    private List<ChartSeries> lineChartData = new();
-    private string[] lineChartLabels = { "Jan", "Fev", "Mar", "Abr", "Mai", "Jun" };
-    */
-    private List<PerifericoStats> topPerifericos = new();
-
-    public class PerifericoStats
-    {
-        public string Nome { get; set; } = "";
-        public int ReservasCount { get; set; }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -267,67 +198,45 @@
 
         totalPerifericos = perifericos.Count();
         totalUsuarios = usuarios.Count();
-        reservasAtivas = reservasAtivasList.Count();
+        reservasAprovadas = reservasAtivasList.Count();
+        reservasPendentes = reservas.Count(r => r.Status == StatusReserva.Pendente);
         perifericosAtivos = perifericos.Count(p => p.Ativo);
         perifericosInativos = perifericos.Count(p => !p.Ativo);
-        perifericosDisponiveis = perifericosAtivos - reservasAtivas;
+        perifericosDisponiveis = perifericosAtivos - reservasAprovadas;
         
         // Calcular taxas
-        taxaOcupacao = perifericosAtivos > 0 ? (double)reservasAtivas / perifericosAtivos * 100 : 0;
-        taxaDisponibilidade = perifericosAtivos > 0 ? (double)perifericosDisponiveis / perifericosAtivos * 100 : 0;
+        taxaOcupacao = perifericosAtivos > 0 ? (double)reservasAprovadas / perifericosAtivos * 100 : 0;
         
         ultimasReservas = reservas.OrderByDescending(r => r.DataCadastro).Take(5);
-
-        // Preparar dados dos gráficos - Temporariamente comentado para resolver erro de compilação
-        // PrepareChartData(perifericos, reservas);
-        
-        // Top periféricos mais reservados - Implementação simplificada
-        topPerifericos = reservas.GroupBy(r => r.PerifericoNome ?? "Sem nome")
-                                 .Select(g => new PerifericoStats 
-                                 { 
-                                     Nome = g.Key, 
-                                     ReservasCount = g.Count() 
-                                 })
-                                 .OrderByDescending(p => p.ReservasCount)
-                                 .Take(3)
-                                 .ToList();
     }
 
-    // Temporariamente comentado para resolver erro de compilação
-    /*
-    private void PrepareChartData(IEnumerable<PerifericoDto> perifericos, IEnumerable<ReservaDto> reservas)
+    private Color GetStatusColor(StatusReserva status)
     {
-        // Gráfico de pizza - Distribuição por tipo
-        var tiposPerifericos = perifericos.GroupBy(p => p.Tipo)
-                                         .Select(g => new { Tipo = g.Key, Count = g.Count() })
-                                         .OrderByDescending(x => x.Count);
-
-        // pieChartData.Clear(); // Temporariamente comentado para resolver erro de compilação
-        // foreach (var tipo in tiposPerifericos)
-        // {
-        //     var chartSeries = new ChartSeries();
-        //     chartSeries.Name = tipo.Tipo;
-        //     chartSeries.Data = new double[] { tipo.Count };
-        //     pieChartData.Add(chartSeries);
-        // }
-
-        // Gráfico de linha - Reservas por mês (simulado)
-        // lineChartData.Clear(); // Temporariamente comentado para resolver erro de compilação
-        // var lineSeries = new ChartSeries();
-        // lineSeries.Name = "Reservas";
-        // lineSeries.Data = new double[] { 12, 19, 15, 25, 22, 30 };
-        // lineChartData.Add(lineSeries);
-
-        // Top periféricos mais reservados
-        topPerifericos = reservas.GroupBy(r => r.PerifericoNome ?? "Sem nome")
-                                 .Select(g => new PerifericoStats 
-                                 { 
-                                     Nome = g.Key, 
-                                     ReservasCount = g.Count() 
-                                 })
-                                 .OrderByDescending(p => p.ReservasCount)
-                                 .Take(3)
-                                 .ToList();
+        return status switch
+        {
+            StatusReserva.Pendente => Color.Warning,
+            StatusReserva.Aprovada => Color.Success,
+            StatusReserva.Rejeitada => Color.Error,
+            StatusReserva.Cancelada => Color.Default,
+            StatusReserva.EmUso => Color.Info,
+            StatusReserva.Devolvida => Color.Secondary,
+            StatusReserva.Expirada => Color.Error,
+            _ => Color.Default
+        };
     }
-    */
+
+    private string GetStatusText(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => "Pendente",
+            StatusReserva.Aprovada => "Aprovada",
+            StatusReserva.Rejeitada => "Rejeitada",
+            StatusReserva.Cancelada => "Cancelada",
+            StatusReserva.EmUso => "Em Uso",
+            StatusReserva.Devolvida => "Devolvida",
+            StatusReserva.Expirada => "Expirada",
+            _ => "Desconhecido"
+        };
+    }
 } 

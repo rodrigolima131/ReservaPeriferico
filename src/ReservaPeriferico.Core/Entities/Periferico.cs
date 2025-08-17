@@ -30,10 +30,13 @@ public class Periferico
     
     public bool Ativo { get; set; } = true;
     
+    public int EquipeId { get; set; }
+    
     public DateTime DataCadastro { get; set; } = DateTime.UtcNow;
     
     public DateTime? DataAtualizacao { get; set; }
     
     // Relacionamentos
     public virtual ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
+    public virtual Equipe Equipe { get; set; } = null!;
 } 

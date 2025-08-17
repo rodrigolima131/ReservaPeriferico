@@ -33,4 +33,7 @@ public class Usuario
     
     // Relacionamentos
     public virtual ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
+    public virtual ICollection<Reserva> ReservasAprovadas { get; set; } = new List<Reserva>();
+    public virtual ICollection<UsuarioEquipe> Equipes { get; set; } = new List<UsuarioEquipe>();
+    public virtual ICollection<Equipe> EquipesAdministradas { get; set; } = new List<Equipe>();
 } 

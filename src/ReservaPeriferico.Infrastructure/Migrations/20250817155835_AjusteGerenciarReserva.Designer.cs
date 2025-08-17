@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ReservaPeriferico.Infrastructure.Data;
@@ -11,9 +12,11 @@ using ReservaPeriferico.Infrastructure.Data;
 namespace ReservaPeriferico.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250817155835_AjusteGerenciarReserva")]
+    partial class AjusteGerenciarReserva
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,16 +65,6 @@ namespace ReservaPeriferico.Infrastructure.Migrations
                     b.HasIndex("UsuarioAdministradorId");
 
                     b.ToTable("equipe", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Equipe responsável pelo desenvolvimento de software",
-                            Nome = "Equipe de Desenvolvimento",
-                            UsuarioAdministradorId = 1
-                        });
                 });
 
             modelBuilder.Entity("ReservaPeriferico.Core.Entities.Periferico", b =>
@@ -141,73 +134,6 @@ namespace ReservaPeriferico.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("periferico", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Ativo = true,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Monitor LED de 24 polegadas para desenvolvimento",
-                            EquipeId = 1,
-                            Marca = "Dell",
-                            Modelo = "P2419H",
-                            Nome = "Monitor Dell 24\"",
-                            NumeroSerie = "DELL001",
-                            Tipo = "Monitor"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Ativo = true,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Teclado mecânico com switches Cherry MX Brown",
-                            EquipeId = 1,
-                            Marca = "Logitech",
-                            Modelo = "G Pro X",
-                            Nome = "Teclado Mecânico Logitech",
-                            NumeroSerie = "LOG001",
-                            Tipo = "Teclado"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Ativo = true,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Mouse óptico com DPI ajustável",
-                            EquipeId = 1,
-                            Marca = "Razer",
-                            Modelo = "DeathAdder V3",
-                            Nome = "Mouse Gamer Razer",
-                            NumeroSerie = "RAZ001",
-                            Tipo = "Mouse"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Ativo = true,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Fones de ouvido com cancelamento de ruído",
-                            EquipeId = 1,
-                            Marca = "Sony",
-                            Modelo = "WH-1000XM4",
-                            Nome = "Headset Sony WH-1000XM4",
-                            NumeroSerie = "SON001",
-                            Tipo = "Headset"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Ativo = true,
-                            DataCadastro = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Descricao = "Webcam HD para reuniões e videoconferências",
-                            EquipeId = 1,
-                            Marca = "Logitech",
-                            Modelo = "C920",
-                            Nome = "Webcam Logitech C920",
-                            NumeroSerie = "LOG002",
-                            Tipo = "Webcam"
-                        });
                 });
 
             modelBuilder.Entity("ReservaPeriferico.Core.Entities.Reserva", b =>
@@ -246,6 +172,12 @@ namespace ReservaPeriferico.Infrastructure.Migrations
                     b.Property<int>("EquipeId")
                         .HasColumnType("integer")
                         .HasColumnName("equipe_id");
+
+                    b.Property<string>("Justificativa")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("justificativa");
 
                     b.Property<string>("MotivoRejeicao")
                         .HasMaxLength(500)
@@ -382,15 +314,6 @@ namespace ReservaPeriferico.Infrastructure.Migrations
                     b.HasIndex("EquipeId");
 
                     b.ToTable("usuario_equipe", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            UsuarioId = 1,
-                            EquipeId = 1,
-                            DataEntrada = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsAdministrador = true
-                        });
                 });
 
             modelBuilder.Entity("ReservaPeriferico.Core.Entities.Equipe", b =>

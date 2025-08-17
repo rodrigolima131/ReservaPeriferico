@@ -6,6 +6,7 @@ namespace ReservaPeriferico.Core.Interfaces
     {
         Task<IEnumerable<UsuarioEquipe>> GetByEquipeIdAsync(int equipeId);
         Task<IEnumerable<UsuarioEquipe>> GetByUsuarioIdAsync(int usuarioId);
+        Task<UsuarioEquipe?> GetByUsuarioAndEquipeAsync(int usuarioId, int equipeId);
         Task AddMembroAsync(int equipeId, int usuarioId, bool isAdministrador = false);
         Task RemoveMembroAsync(int equipeId, int usuarioId);
         Task<bool> UsuarioIsMembroAsync(int equipeId, int usuarioId);

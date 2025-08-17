@@ -35,7 +35,7 @@
                     Dados da Reserva
                 </MudText>
                 
-                <EditForm Model="reserva" OnSubmit="OnSubmit">
+                <EditForm Model="solicitarReserva" OnSubmit="OnSubmit">
                     <DataAnnotationsValidator />
                     <MudStack Spacing="4">
                         <!-- Seleção de Periférico -->
@@ -50,19 +50,19 @@
                         <!-- Datas -->
                         <MudGrid>
                             <MudItem xs="12" md="6">
-                                <MudDatePicker Label="Data de Retirada *" @bind-Date="dataRetirada" Required 
+                                <MudDatePicker Label="Data de Início *" @bind-Date="dataInicio" Required 
                                                MinDate="@DateTime.Today" />
                             </MudItem>
                             <MudItem xs="12" md="6">
-                                <MudDatePicker Label="Data de Devolução *" @bind-Date="dataDevolucao" Required 
+                                <MudDatePicker Label="Data de Fim (Opcional)" @bind-Date="dataFim" 
                                                MinDate="@DateTime.Today" />
                             </MudItem>
                         </MudGrid>
 
                         <!-- Observações -->
-                        <MudTextField T="string" Label="Observações" @bind-Value="reserva.Observacoes" 
-                                     Lines="3" Placeholder="Descreva o motivo da reserva e outras informações relevantes..."
-                                     MaxLength="500" />
+                        <MudTextField T="string" Label="Observações *" @bind-Value="solicitarReserva.Observacoes" 
+                                     Lines="3" Placeholder="Descreva o motivo da reserva (obrigatório)..."
+                                     MaxLength="500" Required />
 
                         <!-- Botões -->
                         <MudStack Row="true" Spacing="2">
@@ -72,7 +72,7 @@
                                 {
                                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                                 }
-                                Salvar Reserva
+                                Solicitar Reserva
                             </MudButton>
                             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
                                        OnClick="Cancelar" StartIcon="@Icons.Material.Filled.Close">
@@ -100,7 +100,7 @@
                             Pendente - Aguardando aprovação
                         </MudChip>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            <strong>Data da Reserva:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                            <strong>Data da Solicitação:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
                         </MudText>
                     </MudStack>
                     
@@ -110,7 +110,7 @@
                     <MudStack>
                         <MudText Typo="Typo.subtitle2">Como funciona?</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Após enviar sua solicitação, ela será analisada pelos administradores do sistema.
+                            Após enviar sua solicitação, ela será analisada pelos administradores da equipe.
                         </MudText>
                     </MudStack>
                     
@@ -124,7 +124,7 @@
                             </MudListItem>
                             <MudListItem T="string">
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
-                                Descreva o motivo da reserva
+                                Descreva o motivo da reserva nas observações
                             </MudListItem>
                             <MudListItem T="string">
                                 <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
@@ -139,11 +139,11 @@
 </MudContainer>
 
 @code {
-    private ReservaDto reserva = new();
+    private SolicitarReservaDto solicitarReserva = new();
     private List<PerifericoDto> perifericosDisponiveis = new();
     private PerifericoDto? perifericoSelecionado = null;
-    private DateTime? dataRetirada;
-    private DateTime? dataDevolucao;
+    private DateTime? dataInicio;
+    private DateTime? dataFim;
     private bool salvando = false;
 
     protected override async Task OnInitializedAsync()
@@ -172,7 +172,7 @@
 
     private async Task AbrirDialogSelecionarPeriferico()
     {
-        IDialogReference? dialogRef = null; // Declarar primeiro
+        IDialogReference? dialogRef = null;
         
         var parameters = new DialogParameters 
         { 
@@ -180,14 +180,14 @@
             ["OnPerifericoSelecionado"] = new EventCallback<PerifericoDto>(this, async (PerifericoDto periferico) =>
             {
                 perifericoSelecionado = periferico;
-                reserva.PerifericoId = periferico.Id;
+                solicitarReserva.PerifericoId = periferico.Id;
                 if (dialogRef != null)
-                    dialogRef.Close(); // Mudança aqui: Close() ao invés de CloseAsync()
+                    dialogRef.Close();
             }),
             ["OnCancelar"] = new EventCallback(this, async () =>
             {
                 if (dialogRef != null)
-                    dialogRef.Close(); // Mudança aqui: Close() ao invés de CloseAsync()
+                    dialogRef.Close();
             })
         };
         
@@ -195,20 +195,7 @@
         dialogRef = await DialogService.ShowAsync<SelecionarPerifericoDialog>("Selecionar Periférico", parameters, options);
     }
 
-    //private async Task AbrirDialogSelecionarPeriferico()
-    //{
-    //    var parameters = new DialogParameters { ["Perifericos"] = perifericosDisponiveis };
-    //    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
-    //    var dialog = DialogService.Show<SelecionarPerifericoDialog>("Selecionar Periférico", parameters, options);
-    //    var result = await dialog.Result;
-    //    if (!result.Cancelled && result.Data != null && result.Data is PerifericoDto selecionado)
-    //    {
-    //        perifericoSelecionado = selecionado;
-    //        reserva.PerifericoId = selecionado.Id;
-    //    }
-    //}
-
-    private async Task SalvarReserva()
+    private async Task SolicitarReserva()
     {
         if (!ValidarFormulario())
             return;
@@ -217,31 +204,25 @@
         
         try
         {
-            // Validar se o periférico ainda está disponível
-            if (!dataRetirada.HasValue || !dataDevolucao.HasValue)
+            // Configurar datas
+            if (dataInicio.HasValue)
             {
-                Snackbar.Add("Por favor, selecione as datas de retirada e devolução.", Severity.Warning);
-                return;
+                solicitarReserva.DataInicio = dataInicio.Value.Date;
             }
 
-            if (!await ReservaService.PerifericoDisponivelAsync(
-                reserva.PerifericoId, dataRetirada.Value, dataDevolucao.Value))
+            if (dataFim.HasValue)
             {
-                Snackbar.Add("Periférico não está disponível no período solicitado. Por favor, escolha outro período.", Severity.Warning);
-                await CarregarPerifericosDisponiveis();
-                return;
+                solicitarReserva.DataFim = dataFim.Value.Date;
             }
 
-            // Configurar dados da reserva
-            reserva.DataInicio = dataRetirada.Value;
-            reserva.DataFim = dataDevolucao.Value;
-            reserva.UsuarioId = 1; // Usuário padrão para testes
+            // Usuário padrão para testes (deve ser substituído pela autenticação real)
+            int usuarioId = 1;
             
             // Persistir no banco
-            var reservaCriada = await ReservaService.CreateAsync(reserva);
+            var reservaCriada = await ReservaService.SolicitarReservaAsync(usuarioId, solicitarReserva);
             
             // Mensagem de sucesso
-            Snackbar.Add($"Reserva criada com sucesso! ID: {reservaCriada.Id}", Severity.Success);
+            Snackbar.Add($"Reserva solicitada com sucesso! ID: {reservaCriada.Id}", Severity.Success);
             
             // Limpar formulário
             LimparFormulario();
@@ -272,44 +253,48 @@
     private bool ValidarFormulario()
     {
         // Validar periférico selecionado
-        if (reserva.PerifericoId == 0)
+        if (solicitarReserva.PerifericoId == 0)
         {
             Snackbar.Add("Por favor, selecione um periférico.", Severity.Warning);
             return false;
         }
 
-        // Validar datas
-        if (!dataRetirada.HasValue)
+        // Validar data de início
+        if (!dataInicio.HasValue)
         {
-            Snackbar.Add("Por favor, selecione a data de retirada.", Severity.Warning);
+            Snackbar.Add("Por favor, selecione a data de início.", Severity.Warning);
             return false;
         }
 
-        if (!dataDevolucao.HasValue)
+        // Validar se a data não é no passado
+        if (dataInicio.Value.Date < DateTime.Today)
         {
-            Snackbar.Add("Por favor, selecione a data de devolução.", Severity.Warning);
+            Snackbar.Add("A data de início não pode ser no passado.", Severity.Warning);
             return false;
         }
 
-        // Validar se data de devolução é posterior à data de retirada
-        if (dataDevolucao.Value <= dataRetirada.Value)
+        // Validar data de fim se fornecida
+        if (dataFim.HasValue)
         {
-            Snackbar.Add("A data de devolução deve ser posterior à data de retirada.", Severity.Warning);
-            return false;
+            if (dataFim.Value.Date <= dataInicio.Value.Date)
+            {
+                Snackbar.Add("A data de fim deve ser posterior à data de início.", Severity.Warning);
+                return false;
+            }
+
+            // Validar período máximo (30 dias)
+            var periodo = dataFim.Value.Date - dataInicio.Value.Date;
+            if (periodo.Days > 30)
+            {
+                Snackbar.Add("O período máximo de reserva é de 30 dias.", Severity.Warning);
+                return false;
+            }
         }
 
-        // Validar se as datas não são no passado
-        if (dataRetirada.Value.Date < DateTime.Today)
+        // Validar observações
+        if (string.IsNullOrWhiteSpace(solicitarReserva.Observacoes))
         {
-            Snackbar.Add("A data de retirada não pode ser no passado.", Severity.Warning);
-            return false;
-        }
-
-        // Validar período máximo (30 dias)
-        var periodo = dataDevolucao.Value.Date - dataRetirada.Value.Date;
-        if (periodo.Days > 30)
-        {
-            Snackbar.Add("O período máximo de reserva é de 30 dias.", Severity.Warning);
+            Snackbar.Add("Por favor, informe as observações da reserva.", Severity.Warning);
             return false;
         }
 
@@ -318,10 +303,10 @@
 
     private void LimparFormulario()
     {
-        reserva = new();
+        solicitarReserva = new();
         perifericoSelecionado = null;
-        dataRetirada = null;
-        dataDevolucao = null;
+        dataInicio = null;
+        dataFim = null;
     }
 
     private void Cancelar()
@@ -331,6 +316,6 @@
 
     private async Task OnSubmit(EditContext context)
     {
-        await SalvarReserva();
+        await SolicitarReserva();
     }
 } 
