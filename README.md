@@ -90,6 +90,7 @@ Pull requests são bem-vindos!
 
 ## Tipos de Periféricos Disponíveis
 
+- Celular
 - Mouse
 - Teclado
 - Monitor

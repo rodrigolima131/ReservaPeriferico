@@ -37,7 +37,7 @@
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="string" @bind-Value="selectedTipo" Variant="Variant.Outlined" FullWidth="true"
-                           Label="Filtrar por Tipo" Title="Filtrar periféricos por tipo">
+                           Label="" Title="Filtrar periféricos por tipo">
                     <MudSelectItem Value="@("")">Todos os Tipos</MudSelectItem>
                     @foreach (var tipo in Enum.GetValues<TipoPeriferico>())
                     {
@@ -47,7 +47,7 @@
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
                 <MudSelect T="string" @bind-Value="selectedStatus" Variant="Variant.Outlined" FullWidth="true"
-                           Label="Filtrar por Status" Title="Filtrar periféricos por status">
+                           Label="" Title="Filtrar periféricos por status">
                     <MudSelectItem Value="@("")">Todos os Status</MudSelectItem>
                     <MudSelectItem Value="@("true")">Ativo</MudSelectItem>
                     <MudSelectItem Value="@("false")">Inativo</MudSelectItem>

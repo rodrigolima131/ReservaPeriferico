@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ReservaPeriferico.Core.Entities;
+using ReservaPeriferico.Core.Enums;
 
 namespace ReservaPeriferico.Infrastructure.Data;
 
@@ -60,7 +61,7 @@ public class ApplicationDbContext : DbContext
                     Id = 1,
                     Nome = "Monitor Dell 24\"",
                     Descricao = "Monitor LED de 24 polegadas para desenvolvimento",
-                    Tipo = "Monitor",
+                    Tipo = TipoPeriferico.Monitor.ToString(),
                     Marca = "Dell",
                     Modelo = "P2419H",
                     NumeroSerie = "DELL001",
@@ -73,7 +74,7 @@ public class ApplicationDbContext : DbContext
                     Id = 2,
                     Nome = "Teclado Mecânico Logitech",
                     Descricao = "Teclado mecânico com switches Cherry MX Brown",
-                    Tipo = "Teclado",
+                    Tipo = TipoPeriferico.Teclado.ToString(),
                     Marca = "Logitech",
                     Modelo = "G Pro X",
                     NumeroSerie = "LOG001",
@@ -86,7 +87,7 @@ public class ApplicationDbContext : DbContext
                     Id = 3,
                     Nome = "Mouse Gamer Razer",
                     Descricao = "Mouse óptico com DPI ajustável",
-                    Tipo = "Mouse",
+                    Tipo = TipoPeriferico.Mouse.ToString(),
                     Marca = "Razer",
                     Modelo = "DeathAdder V3",
                     NumeroSerie = "RAZ001",
@@ -99,7 +100,7 @@ public class ApplicationDbContext : DbContext
                     Id = 4,
                     Nome = "Headset Sony WH-1000XM4",
                     Descricao = "Fones de ouvido com cancelamento de ruído",
-                    Tipo = "Headset",
+                    Tipo = TipoPeriferico.Headset.ToString(),
                     Marca = "Sony",
                     Modelo = "WH-1000XM4",
                     NumeroSerie = "SON001",
@@ -112,7 +113,7 @@ public class ApplicationDbContext : DbContext
                     Id = 5,
                     Nome = "Webcam Logitech C920",
                     Descricao = "Webcam HD para reuniões e videoconferências",
-                    Tipo = "Webcam",
+                    Tipo = TipoPeriferico.Webcam.ToString(),
                     Marca = "Logitech",
                     Modelo = "C920",
                     NumeroSerie = "LOG002",
