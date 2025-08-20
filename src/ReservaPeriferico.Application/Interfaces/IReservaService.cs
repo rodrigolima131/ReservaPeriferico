@@ -23,4 +23,5 @@ public interface IReservaService
     Task<bool> PerifericoDisponivelAsync(int perifericoId, DateTime dataInicio, DateTime? dataFim, int? excludeId = null);
     Task<bool> UsuarioPodeReservarAsync(int usuarioId, int perifericoId);
     Task<bool> UsuarioPodeAprovarAsync(int usuarioId, int equipeId);
+    Task<IEnumerable<HistoricoReservaDto>> GetHistoricoAsync(FiltroHistoricoDto filtros);
 } 

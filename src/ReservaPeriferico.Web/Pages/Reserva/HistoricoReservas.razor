@@ -1,0 +1,456 @@
+@page "/historico-reservas"
+@using MudBlazor
+@using ReservaPeriferico.Application.DTOs
+@using ReservaPeriferico.Core.Enums
+@using ReservaPeriferico.Application.Interfaces
+@using ReservaPeriferico.Web.Components
+@inject IReservaService ReservaService
+@inject IEquipeService EquipeService
+@inject IUsuarioService UsuarioService
+@inject IPerifericoService PerifericoService
+@inject IDialogService DialogService
+
+<PageTitle>Histórico de Reservas</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-4" Elevation="3">
+        <MudStack Spacing="4">
+            <!-- Cabeçalho -->
+            <MudStack Direction="Row" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack>
+                    <MudText Typo="Typo.h4" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
+                        Histórico de Reservas
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Visualize o histórico completo de reservas da sua equipe
+                    </MudText>
+                </MudStack>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="CarregarHistorico"
+                           Disabled="@_carregando">
+                    Atualizar
+                </MudButton>
+            </MudStack>
+
+            <!-- Filtros -->
+            <MudExpansionPanels MultiExpansion="true">
+                <MudExpansionPanel Text="Filtros de Busca" IsExpanded="true">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudTextField @bind-Value="_filtros.TermoBusca"
+                                         Label="Buscar por..."
+                                         Placeholder="Usuário, periférico ou observações"
+                                         Variant="Variant.Outlined"
+                                         Clearable="true"
+                                         AdornmentIcon="@Icons.Material.Filled.Search" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect TValue="StatusReserva?" @bind-Value="_filtros.Status"
+                                       Label="Status da Reserva"
+                                      Variant="Variant.Outlined"
+                                      Clearable="true">
+                                <MudSelectItem T="StatusReserva?" Value="@((StatusReserva?)null)">Todos</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Pendente">Pendente</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Aprovada">Aprovada</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Rejeitada">Rejeitada</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Cancelada">Cancelada</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.EmUso">Em Uso</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Devolvida">Devolvida</MudSelectItem>
+                                <MudSelectItem T="StatusReserva?" Value="@StatusReserva.Expirada">Expirada</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect TValue="int?" @bind-Value="_filtros.EquipeId"
+                                       Label="Equipe"
+                                      Variant="Variant.Outlined"
+                                      Clearable="true">
+                                <MudSelectItem T="int?" Value="@((int?)null)">Todas</MudSelectItem>
+                                @foreach (var equipe in _equipes)
+                                {
+                                    <MudSelectItem T="int?" Value="@equipe.Id">@equipe.Nome</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect TValue="int?" @bind-Value="_filtros.PerifericoId"
+                                       Label="Periférico"
+                                      Variant="Variant.Outlined"
+                                      Clearable="true">
+                                <MudSelectItem T="int?"  Value="@((int?)null)">Todos</MudSelectItem>
+                                @foreach (var periferico in _perifericos)
+                                {
+                                    <MudSelectItem T="int?" Value="@periferico.Id">@periferico.Nome</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudDatePicker @bind-Date="_filtros.DataInicio"
+                                          Label="Data de Início"
+                                          Variant="Variant.Outlined"
+                                          Clearable="true"
+                                          PickerVariant="PickerVariant.Dialog" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudDatePicker @bind-Date="_filtros.DataFim"
+                                          Label="Data de Fim"
+                                          Variant="Variant.Outlined"
+                                          Clearable="true"
+                                          PickerVariant="PickerVariant.Dialog" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCheckBox T="bool" @bind-Checked="_filtros.IncluirExpiradas" 
+                                        Label="Incluir Reservas Expiradas"
+                                        Color="Color.Primary" />
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudSelect TValue="string" @bind-Value="_filtros.Ordenacao" 
+                                      Label="Ordenar por"
+                                      Variant="Variant.Outlined">
+                                <MudSelectItem T="string" Value="@("DataCadastro")">Data de Cadastro</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("DataInicio")">Data de Início</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("DataFim")">Data de Fim</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Usuario")">Usuário</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Periferico")">Periférico</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Status")">Status</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                                <MudButton OnClick="() => _filtros.OrdemDecrescente = false"
+                                           Variant="@(_filtros.OrdemDecrescente ? Variant.Text : Variant.Filled)"
+                                           Color="@(_filtros.OrdemDecrescente ? Color.Default : Color.Primary)"
+                                           StartIcon="@Icons.Material.Filled.ArrowUpward">
+                                    Crescente
+                                </MudButton>
+                                <MudButton OnClick="() => _filtros.OrdemDecrescente = true"
+                                           Variant="@(_filtros.OrdemDecrescente ? Variant.Filled : Variant.Text)"
+                                           Color="@(_filtros.OrdemDecrescente ? Color.Primary : Color.Default)"
+                                           StartIcon="@Icons.Material.Filled.ArrowDownward">
+                                    Decrescente
+                                </MudButton>
+                            </MudButtonGroup>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudStack Direction="Row" Justify="Justify.FlexEnd" Spacing="2">
+                                <MudButton Variant="Variant.Outlined" 
+                                           OnClick="LimparFiltros"
+                                           StartIcon="@Icons.Material.Filled.Clear">
+                                    Limpar Filtros
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary"
+                                           OnClick="AplicarFiltros"
+                                           StartIcon="@Icons.Material.Filled.Search"
+                                           Disabled="@_carregando">
+                                    Aplicar Filtros
+                                </MudButton>
+                            </MudStack>
+                        </MudItem>
+                    </MudGrid>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+
+            <!-- Estatísticas -->
+            <MudPaper Class="pa-3" Style="background: var(--mud-palette-background-grey);">
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">@_historico.Count</MudText>
+                            <MudText Typo="Typo.caption">Total de Reservas</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Success">@_reservasAprovadas</MudText>
+                            <MudText Typo="Typo.caption">Aprovadas</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Error">@_reservasRejeitadas</MudText>
+                            <MudText Typo="Typo.caption">Rejeitadas</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudStack AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Warning">@_reservasCanceladas</MudText>
+                            <MudText Typo="Typo.caption">Canceladas</MudText>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Tabela de Reservas -->
+            @if (_carregando)
+            {
+                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-8">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                    <MudText Typo="Typo.body2" Class="mt-2">Carregando histórico...</MudText>
+                </MudStack>
+            }
+            else if (!_historico.Any())
+            {
+                <MudPaper Class="pa-8" Style="background: var(--mud-palette-background-grey);">
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">Nenhuma reserva encontrada</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Tente ajustar os filtros de busca
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+            else
+            {
+                <MudTable Items="@_historico" Dense="true" Hover="true" Striped="true" 
+                          Loading="@_carregando" LoadingProgressColor="Color.Primary"
+                          Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Usuário</MudTh>
+                        <MudTh>Periférico</MudTh>
+                        <MudTh>Equipe</MudTh>
+                        <MudTh>Período</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Observações</MudTh>
+                        <MudTh>Ações</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Usuário">
+                            <MudStack>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.UsuarioNome</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.UsuarioEmail</MudText>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Periférico">
+                            <MudStack>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.PerifericoNome</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @context.PerifericoMarca @context.PerifericoModelo
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                    @context.PerifericoTipo
+                                </MudChip>
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Equipe">
+                            <MudText Typo="Typo.body2">@context.EquipeNome</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Período">
+                            <MudStack>
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />
+                                    @context.DataInicio.ToString("dd/MM/yyyy HH:mm")
+                                </MudText>
+                                @if (context.DataFim.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />
+                                        @context.DataFim.Value.ToString("dd/MM/yyyy HH:mm")
+                                    </MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                                        @context.DuracaoReserva
+                                    </MudChip>
+                                }
+                            </MudStack>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Color="@GetStatusColor(context.Status)" 
+                                     Variant="Variant.Filled" 
+                                     Size="Size.Small">
+                                @context.StatusDescricao
+                            </MudChip>
+                            @if (context.EstaExpirada)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined" Class="mt-1">
+                                    Expirada
+                                </MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Observações">
+                            @if (!string.IsNullOrEmpty(context.Observacoes))
+                            {
+                                <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                                    @context.Observacoes
+                                </MudText>
+                            }
+                            @if (!string.IsNullOrEmpty(context.MotivoRejeicao))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-1 text-truncate" Style="max-width: 200px;">
+                                    <strong>Rejeição:</strong> @context.MotivoRejeicao
+                                </MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Ações">
+                            <MudStack Row="true" Spacing="1">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                               Color="Color.Info" 
+                                               Size="Size.Small"
+                                               OnClick="() => VerDetalhes(context)" 
+                                               Title="Ver Detalhes" />
+                                @if (context.UsuarioAprovadorNome != null)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Person"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small"
+                                                   Title="@($"Aprovado por {context.UsuarioAprovadorNome}")"
+                                                   Disabled="true" />
+                                }
+                            </MudStack>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<HistoricoReservaDto> _historico = new();
+    private List<EquipeDto> _equipes = new();
+    private List<PerifericoDto> _perifericos = new();
+    private FiltroHistoricoDto _filtros = new();
+    private bool _carregando = false;
+    private int _reservasAprovadas = 0;
+    private int _reservasRejeitadas = 0;
+    private int _reservasCanceladas = 0;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarDadosIniciais();
+        await CarregarHistorico();
+    }
+
+    private async Task CarregarDadosIniciais()
+    {
+        try
+        {
+            _equipes = (await EquipeService.GetAllAsync()).ToList();
+            _perifericos = (await PerifericoService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Em produção, usar um sistema de notificação
+            Console.WriteLine($"Erro ao carregar dados iniciais: {ex.Message}");
+        }
+    }
+
+    private async Task CarregarHistorico()
+    {
+        _carregando = true;
+        StateHasChanged();
+
+        try
+        {
+            var historico = await ReservaService.GetHistoricoAsync(_filtros);
+            _historico = historico.ToList();
+            
+            // Calcular estatísticas
+            _reservasAprovadas = _historico.Count(r => r.Status == StatusReserva.Aprovada);
+            _reservasRejeitadas = _historico.Count(r => r.Status == StatusReserva.Rejeitada);
+            _reservasCanceladas = _historico.Count(r => r.Status == StatusReserva.Cancelada);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar histórico: {ex.Message}");
+            _historico.Clear();
+        }
+        finally
+        {
+            _carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AplicarFiltros()
+    {
+        await CarregarHistorico();
+    }
+
+    private void LimparFiltros()
+    {
+        _filtros = new FiltroHistoricoDto();
+        StateHasChanged();
+    }
+
+    private async Task VerDetalhes(HistoricoReservaDto historico)
+    {
+        // Converter HistoricoReservaDto para ReservaDto
+        var reservaDto = new ReservaDto
+        {
+            Id = historico.Id,
+            UsuarioId = 0, // Não disponível no histórico
+            PerifericoId = 0, // Não disponível no histórico
+            EquipeId = 0, // Não disponível no histórico
+            DataInicio = historico.DataInicio,
+            DataFim = historico.DataFim,
+            Observacoes = historico.Observacoes,
+            Status = historico.Status,
+            DataAprovacao = historico.DataAprovacao,
+            MotivoRejeicao = historico.MotivoRejeicao,
+            DataCadastro = historico.DataCadastro,
+            DataAtualizacao = historico.DataAtualizacao,
+            DataDevolucao = historico.DataDevolucao,
+            
+            // Propriedades de navegação
+            UsuarioNome = historico.UsuarioNome,
+            UsuarioEmail = historico.UsuarioEmail,
+            UsuarioMatricula = string.Empty, // Não disponível no histórico
+            UsuarioDepartamento = string.Empty, // Não disponível no histórico
+            UsuarioCargo = string.Empty, // Não disponível no histórico
+            
+            PerifericoNome = historico.PerifericoNome,
+            PerifericoDescricao = string.Empty, // Não disponível no histórico
+            PerifericoTipo = historico.PerifericoTipo,
+            PerifericoMarca = historico.PerifericoMarca,
+            PerifericoModelo = historico.PerifericoModelo,
+            PerifericoNumeroSerie = string.Empty, // Não disponível no histórico
+            
+            EquipeNome = historico.EquipeNome,
+            EquipeDescricao = string.Empty, // Não disponível no histórico
+            EquipeAdministradorNome = string.Empty, // Não disponível no histórico
+            
+            UsuarioAprovadorNome = historico.UsuarioAprovadorNome,
+            UsuarioAprovadorEmail = historico.UsuarioAprovadorEmail
+        };
+
+        var parameters = new DialogParameters
+        { 
+            ["Reserva"] = reservaDto
+        };
+
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
+        var dialog = await DialogService.ShowAsync<DetalhesReservaDialog>("Detalhes da Reserva", parameters, options);
+        await dialog.Result;
+    }
+
+    private Color GetStatusColor(StatusReserva status)
+    {
+        return status switch
+        {
+            StatusReserva.Pendente => Color.Warning,
+            StatusReserva.Aprovada => Color.Success,
+            StatusReserva.Rejeitada => Color.Error,
+            StatusReserva.Cancelada => Color.Default,
+            StatusReserva.EmUso => Color.Info,
+            StatusReserva.Devolvida => Color.Success,
+            StatusReserva.Expirada => Color.Warning,
+            _ => Color.Default
+        };
+    }
+}

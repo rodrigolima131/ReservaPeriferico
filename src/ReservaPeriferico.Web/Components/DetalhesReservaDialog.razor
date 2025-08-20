@@ -2,92 +2,308 @@
 @using ReservaPeriferico.Application.DTOs
 @using ReservaPeriferico.Core.Enums
 
-<MudDialog>
-    <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Detalhes da Reserva #@Reserva.Id</MudText>
-        
-        <MudGrid>
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Usuário</MudText>
-                <MudText Typo="Typo.body1">@Reserva.UsuarioNome</MudText>
-            </MudItem>
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Periférico</MudText>
-                <MudText Typo="Typo.body1">@Reserva.PerifericoNome</MudText>
-            </MudItem>
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Equipe</MudText>
-                <MudText Typo="Typo.body1">@Reserva.EquipeNome</MudText>
-            </MudItem>
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Status</MudText>
-                <MudChip T="string" Color="@GetStatusColor(Reserva.Status)" Size="Size.Small">
-                    @GetStatusText(Reserva.Status)
+<MudDialog Options="dialogOptions">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Detalhes da Reserva #@Reserva.Id</MudText>
+            <MudSpacer />
+            <MudChip T="string" Color="@GetStatusColor(Reserva.Status)" 
+                     Variant="Variant.Filled" 
+                     Size="Size.Medium"
+                     Icon="@GetStatusIcon(Reserva.Status)">
+                @Reserva.StatusDescricao
+            </MudChip>
+            @if (Reserva.EstaExpirada)
+            {
+                <MudChip T="string" Size="Size.Medium" Color="Color.Warning" 
+                         Variant="Variant.Text" 
+                         Icon="@Icons.Material.Filled.Warning">
+                    Expirada
                 </MudChip>
-            </MudItem>
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Início</MudText>
-                <MudText Typo="Typo.body1">@Reserva.DataInicio.ToString("dd/MM/yyyy HH:mm")</MudText>
-            </MudItem>
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Fim</MudText>
-                <MudText Typo="Typo.body1">
-                    @(Reserva.DataFim?.ToString("dd/MM/yyyy") ?? "Não definido")
-                </MudText>
-            </MudItem>
-            
-            @if (!string.IsNullOrWhiteSpace(Reserva.Observacoes))
-            {
-                <MudItem xs="12">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Observações</MudText>
-                    <MudText Typo="Typo.body1">@Reserva.Observacoes</MudText>
-                </MudItem>
             }
-            
-            @if (Reserva.UsuarioAprovadorId.HasValue)
-            {
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Aprovador</MudText>
-                    <MudText Typo="Typo.body1">@Reserva.UsuarioAprovadorNome</MudText>
-                </MudItem>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-0">
+            <!-- Seção: Informações Principais -->
+            <MudPaper Class="pa-4 mb-4" Elevation="2" Style="background: var(--mud-palette-background-grey);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Informações Principais</MudText>
+                </MudStack>
                 
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Aprovação</MudText>
-                    <MudText Typo="Typo.body1">
-                        @(Reserva.DataAprovacao?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")
-                    </MudText>
-                </MudItem>
-            }
-            
-            @if (!string.IsNullOrWhiteSpace(Reserva.MotivoRejeicao))
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudCard Elevation="1" Class="pa-3 h-100" Style="min-height: 160px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Medium" />
+                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">Solicitante</MudText>
+                            </MudStack>
+                            <MudStack Spacing="2" Class="flex-grow-1">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@Reserva.UsuarioNome</MudText>
+                                @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioEmail))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mr-1" />
+                                        @Reserva.UsuarioEmail
+                                    </MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioMatricula))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Class="mr-1" />
+                                        Matrícula: @Reserva.UsuarioMatricula
+                                    </MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioDepartamento))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" Class="mr-1" />
+                                        @Reserva.UsuarioDepartamento
+                                    </MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioCargo))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Small" Class="mr-1" />
+                                        @Reserva.UsuarioCargo
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudCard Elevation="1" Class="pa-3 h-100" Style="min-height: 160px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Devices" Color="Color.Primary" Size="Size.Medium" />
+                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">Periférico</MudText>
+                            </MudStack>
+                            <MudStack Spacing="2" Class="flex-grow-1">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@Reserva.PerifericoNome</MudText>
+                                @if (!string.IsNullOrWhiteSpace(Reserva.PerifericoMarca) || !string.IsNullOrWhiteSpace(Reserva.PerifericoModelo))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @Reserva.PerifericoMarca @Reserva.PerifericoModelo
+                                    </MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.PerifericoTipo))
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" 
+                                             Variant="Variant.Text" 
+                                             Icon="@Icons.Material.Filled.Category"
+                                             Class="mt-1">
+                                        @Reserva.PerifericoTipo
+                                    </MudChip>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.PerifericoNumeroSerie))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.QrCode" Size="Size.Small" Class="mr-1" />
+                                        Série: @Reserva.PerifericoNumeroSerie
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudCard Elevation="1" Class="pa-3 h-100" Style="min-height: 160px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Primary" Size="Size.Medium" />
+                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">Equipe</MudText>
+                            </MudStack>
+                            <MudStack Spacing="2" Class="flex-grow-1">
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">@Reserva.EquipeNome</MudText>
+                                @if (!string.IsNullOrWhiteSpace(Reserva.EquipeDescricao))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @Reserva.EquipeDescricao
+                                    </MudText>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Reserva.EquipeAdministradorNome))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Class="mr-1" />
+                                        Admin: @Reserva.EquipeAdministradorNome
+                                    </MudText>
+                                }
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudCard Elevation="1" Class="pa-3 h-100" Style="min-height: 160px;">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" Size="Size.Medium" />
+                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">Período</MudText>
+                            </MudStack>
+                            <MudStack Spacing="2" Class="flex-grow-1">
+                                <MudText Typo="Typo.body2">
+                                    <strong>Início:</strong> @Reserva.DataInicio.ToString("dd/MM/yyyy HH:mm")
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    <strong>Fim:</strong> @(Reserva.DataFim?.ToString("dd/MM/yyyy HH:mm") ?? "Não definido")
+                                </MudText>
+                                @if (Reserva.DataFim.HasValue)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" 
+                                             Variant="Variant.Text" 
+                                             Icon="@Icons.Material.Filled.Timer"
+                                             Class="mt-1">
+                                        @Reserva.DuracaoFormatada
+                                    </MudChip>
+                                }
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Seção: Informações Adicionais do Periférico -->
+            @if (!string.IsNullOrWhiteSpace(Reserva.PerifericoDescricao))
             {
-                <MudItem xs="12">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Error">Motivo da Rejeição</MudText>
-                    <MudText Typo="Typo.body1">@Reserva.MotivoRejeicao</MudText>
-                </MudItem>
+                <MudPaper Class="pa-4 mb-4" Elevation="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Color="Color.Primary">Informações Adicionais do Periférico</MudText>
+                    </MudStack>
+                    
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudAlert Severity="Severity.Info" Variant="Variant.Text" Icon="@Icons.Material.Filled.Description">
+                                <strong>Descrição:</strong><br />
+                                @Reserva.PerifericoDescricao
+                            </MudAlert>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
             }
-            
-            <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Data de Cadastro</MudText>
-                <MudText Typo="Typo.body1">@Reserva.DataCadastro.ToString("dd/MM/yyyy HH:mm")</MudText>
-            </MudItem>
-            
-            @if (Reserva.DataAtualizacao.HasValue)
+
+            <!-- Seção: Timeline da Reserva -->
+            <MudPaper Class="pa-4 mb-4" Elevation="2">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Color="Color.Primary">Timeline da Reserva</MudText>
+                </MudStack>
+                
+                <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" 
+                            TimelinePosition="TimelinePosition.Start"
+                            Class="mt-0">
+                    
+                    <!-- Cadastro -->
+                    <MudTimelineItem Color="Color.Info" Icon="@Icons.Material.Filled.Add">
+                        <ItemContent>
+                            <MudText Typo="Typo.body1" Style="font-weight: 500;">Reserva Criada</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @Reserva.DataCadastro.ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </ItemContent>
+                    </MudTimelineItem>
+                    
+                    <!-- Aprovação -->
+                    @if (Reserva.DataAprovacao.HasValue)
+                    {
+                        <MudTimelineItem Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">
+                            <ItemContent>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Aprovada</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @Reserva.DataAprovacao.Value.ToString("dd/MM/yyyy HH:mm")
+                                </MudText>
+                                @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioAprovadorNome))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
+                                        por @Reserva.UsuarioAprovadorNome
+                                    </MudText>
+                                    @if (!string.IsNullOrWhiteSpace(Reserva.UsuarioAprovadorEmail))
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mr-1" />
+                                            @Reserva.UsuarioAprovadorEmail
+                                        </MudText>
+                                    }
+                                }
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                    
+                    <!-- Atualização -->
+                    @if (Reserva.DataAtualizacao.HasValue && Reserva.DataAtualizacao != Reserva.DataCadastro)
+                    {
+                        <MudTimelineItem Color="Color.Warning" Icon="@Icons.Material.Filled.Update">
+                            <ItemContent>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Última Atualização</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @Reserva.DataAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")
+                                </MudText>
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                    
+                    <!-- Devolução -->
+                    @if (Reserva.DataDevolucao.HasValue)
+                    {
+                        <MudTimelineItem Color="Color.Success" Icon="@Icons.Material.Filled.Assignment">
+                            <ItemContent>
+                                <MudText Typo="Typo.body1" Style="font-weight: 500;">Devolvida</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @Reserva.DataDevolucao.Value.ToString("dd/MM/yyyy HH:mm")
+                                </MudText>
+                            </ItemContent>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            </MudPaper>
+
+            <!-- Seção: Observações e Motivos -->
+            @if (!string.IsNullOrWhiteSpace(Reserva.Observacoes) || !string.IsNullOrWhiteSpace(Reserva.MotivoRejeicao))
             {
-                <MudItem xs="12" md="6">
-                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Última Atualização</MudText>
-                    <MudText Typo="Typo.body1">@Reserva.DataAtualizacao.Value.ToString("dd/MM/yyyy HH:mm")</MudText>
-                </MudItem>
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Comment" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Color="Color.Primary">Observações</MudText>
+                    </MudStack>
+                    
+                    <MudGrid>
+                        @if (!string.IsNullOrWhiteSpace(Reserva.Observacoes))
+                        {
+                            <MudItem xs="12">
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Text" Icon="@Icons.Material.Filled.Info">
+                                    <strong>Observações da Reserva:</strong><br />
+                                    @Reserva.Observacoes
+                                </MudAlert>
+                            </MudItem>
+                        }
+                        
+                        @if (!string.IsNullOrWhiteSpace(Reserva.MotivoRejeicao))
+                        {
+                            <MudItem xs="12">
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Text" Icon="@Icons.Material.Filled.Error">
+                                    <strong>Motivo da Rejeição:</strong><br />
+                                    @Reserva.MotivoRejeicao
+                                </MudAlert>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
             }
-        </MudGrid>
+        </MudContainer>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Fechar</MudButton>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%;">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" />
+                ID da Reserva: #@Reserva.Id
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Close"
+                       OnClick="Cancel">
+                Fechar
+            </MudButton>
+        </MudStack>
     </DialogActions>
 </MudDialog>
 
@@ -96,8 +312,18 @@
     
     [Parameter] public ReservaDto Reserva { get; set; } = default!;
     
+    // Configurações do dialog para melhor experiência do usuário
+    private DialogOptions dialogOptions = new() 
+    { 
+        CloseOnEscapeKey = true, 
+        MaxWidth = MaxWidth.Large,
+        FullWidth = false,
+        CloseButton = true
+    };
+    
     void Cancel() => MudDialog.Cancel();
     
+    // Método para determinar a cor do status baseado no enum StatusReserva
     private Color GetStatusColor(StatusReserva status)
     {
         return status switch
@@ -107,24 +333,25 @@
             StatusReserva.Rejeitada => Color.Error,
             StatusReserva.Cancelada => Color.Default,
             StatusReserva.EmUso => Color.Info,
-            StatusReserva.Devolvida => Color.Secondary,
-            StatusReserva.Expirada => Color.Error,
+            StatusReserva.Devolvida => Color.Success,
+            StatusReserva.Expirada => Color.Warning,
             _ => Color.Default
         };
     }
-
-    private string GetStatusText(StatusReserva status)
+    
+    // Método para determinar o ícone do status baseado no enum StatusReserva
+    private string GetStatusIcon(StatusReserva status)
     {
         return status switch
         {
-            StatusReserva.Pendente => "Pendente",
-            StatusReserva.Aprovada => "Aprovada",
-            StatusReserva.Rejeitada => "Rejeitada",
-            StatusReserva.Cancelada => "Cancelada",
-            StatusReserva.EmUso => "Em Uso",
-            StatusReserva.Devolvida => "Devolvida",
-            StatusReserva.Expirada => "Expirada",
-            _ => "Desconhecido"
+            StatusReserva.Pendente => Icons.Material.Filled.Schedule,
+            StatusReserva.Aprovada => Icons.Material.Filled.CheckCircle,
+            StatusReserva.Rejeitada => Icons.Material.Filled.Cancel,
+            StatusReserva.Cancelada => Icons.Material.Filled.Block,
+            StatusReserva.EmUso => Icons.Material.Filled.PlayArrow,
+            StatusReserva.Devolvida => Icons.Material.Filled.AssignmentReturned,
+            StatusReserva.Expirada => Icons.Material.Filled.AccessTime,
+            _ => Icons.Material.Filled.Help
         };
     }
 }
