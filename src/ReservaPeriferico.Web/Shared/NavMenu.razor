@@ -1,5 +1,8 @@
 ﻿
 
+@inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
+
 <MudNavMenu Class="mt-4">
     <!-- Informações do Usuário -->
     <MudPaper Class="ma-4 pa-3" Elevation="1" Style="background: var(--mud-palette-primary-lighten);">
@@ -38,10 +41,33 @@
     
     <MudDivider Class="my-2" />
     
+    <!-- Botão de Alternar Tema -->
+    <MudNavLink OnClick="ToggleTheme" Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" Color="Color.Primary">
+        @(ThemeService.IsDarkMode ? "Modo Claro" : "Modo Escuro")
+    </MudNavLink>
+    
     <!-- Botão de Logout -->
     <MudNavLink Href="logout" Icon="@Icons.Material.Filled.Logout" Color="Color.Error">
         Sair
     </MudNavLink>
 </MudNavMenu>
+
+@code {
+    private async Task ToggleTheme()
+    {
+        ThemeService.ToggleTheme();
+        
+        // Salvar preferência no localStorage
+        try
+        {
+            var theme = ThemeService.IsDarkMode ? "dark" : "light";
+            await JSRuntime.InvokeVoidAsync("themeService.setTheme", theme);
+        }
+        catch
+        {
+            // Ignorar erros de localStorage
+        }
+    }
+}
 
 

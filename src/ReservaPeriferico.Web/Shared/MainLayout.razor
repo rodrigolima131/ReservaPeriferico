@@ -1,8 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager Navigation
-@using MudBlazor
+@inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
 
-<MudThemeProvider Theme="CustomTheme" />
+<MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudPopoverProvider />
@@ -46,16 +47,23 @@
     private bool IsLoginPage => Navigation.Uri.EndsWith("/") || Navigation.Uri.EndsWith("/login");
     private bool ShouldShowMenu => !IsLoginPage; // Simplificado: sempre mostrar menu exceto na página de login
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Inscrever para mudanças de navegação
         Navigation.LocationChanged += OnLocationChanged;
+        
+        // Inscrever para mudanças do tema
+        ThemeService.PropertyChanged += OnThemeChanged;
+        
+        // Carregar tema salvo no localStorage
+        await LoadThemeFromLocalStorage();
     }
 
     public void Dispose()
     {
         // Cancelar inscrições
         Navigation.LocationChanged -= OnLocationChanged;
+        ThemeService.PropertyChanged -= OnThemeChanged;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -63,36 +71,30 @@
         StateHasChanged();
     }
 
+    private void OnThemeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ThemeService.CurrentTheme))
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadThemeFromLocalStorage()
+    {
+        try
+        {
+            var isDarkMode = await JSRuntime.InvokeAsync<bool>("themeService.isDarkMode");
+            ThemeService.SetTheme(isDarkMode);
+        }
+        catch
+        {
+            // Se houver erro, usar tema light como padrão
+            ThemeService.SetTheme(false);
+        }
+    }
+
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
-
-    MudTheme CustomTheme = new MudTheme()
-    {
-        PaletteLight = new PaletteLight()
-        {
-            Primary = "#002233", 
-            PrimaryDarken = "#012e45",
-            Secondary = "#a44dff",
-           // Success = "#00ffd4",
-           // Warning = "#ff8900",
-           // Error = "#ff009e",
-            Info = "#00dbff",
-            Background = "#ffffff",
-            Surface = "#ffffff"
-        },
-        PaletteDark = new PaletteDark()
-        {
-            Primary = "#00dbff",
-            PrimaryDarken = "012e45",
-            Secondary = "#a44dff",
-            //Success = "#00ffd4",
-            //Warning = "#ff8900",
-            //Error = "#ff009e",
-            Info = "#00dbff",
-            Background = "#1a1a1a",
-            Surface = "#2d2d2d"
-        }
-    };
 }
