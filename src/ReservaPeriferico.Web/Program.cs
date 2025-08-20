@@ -4,6 +4,7 @@ using ReservaPeriferico.Infrastructure.Extensions;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using ReservaPeriferico.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Configurar MudBlazor
 builder.Services.AddMudServices();
+
+// Configurar ThemeService
+builder.Services.AddScoped<ThemeService>();
 
 builder.Services.AddHttpContextAccessor();
 
