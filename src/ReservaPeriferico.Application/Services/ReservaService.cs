@@ -303,4 +303,113 @@ public class ReservaService : IReservaService
             DataDevolucao = dto.DataDevolucao
         };
     }
+
+    public async Task<IEnumerable<HistoricoReservaDto>> GetHistoricoAsync(FiltroHistoricoDto filtros)
+    {
+        var reservas = await _reservaRepository.GetAllAsync();
+        
+        // Filtrar por equipe se especificado
+        if (filtros.EquipeId.HasValue)
+        {
+            reservas = reservas.Where(r => r.EquipeId == filtros.EquipeId.Value);
+        }
+        
+        // Filtrar por usuário se especificado
+        if (filtros.UsuarioId.HasValue)
+        {
+            reservas = reservas.Where(r => r.UsuarioId == filtros.UsuarioId.Value);
+        }
+        
+        // Filtrar por periférico se especificado
+        if (filtros.PerifericoId.HasValue)
+        {
+            reservas = reservas.Where(r => r.PerifericoId == filtros.PerifericoId.Value);
+        }
+        
+        // Filtrar por status se especificado
+        if (filtros.Status.HasValue)
+        {
+            reservas = reservas.Where(r => r.Status == filtros.Status.Value);
+        }
+        
+        // Filtrar por período se especificado
+        if (filtros.DataInicio.HasValue)
+        {
+            reservas = reservas.Where(r => r.DataCadastro >= filtros.DataInicio.Value);
+        }
+        
+        if (filtros.DataFim.HasValue)
+        {
+            reservas = reservas.Where(r => r.DataCadastro <= filtros.DataFim.Value);
+        }
+        
+        // Filtrar por termo de busca
+        if (!string.IsNullOrWhiteSpace(filtros.TermoBusca))
+        {
+            var termo = filtros.TermoBusca.ToLower();
+            reservas = reservas.Where(r => 
+                (r.Usuario?.Nome?.ToLower().Contains(termo) == true) ||
+                (r.Periferico?.Nome?.ToLower().Contains(termo) == true) ||
+                (r.Observacoes?.ToLower().Contains(termo) == true));
+        }
+        
+        // Filtrar reservas expiradas se solicitado
+        if (!filtros.IncluirExpiradas)
+        {
+            reservas = reservas.Where(r => 
+                r.Status != StatusReserva.Expirada && 
+                (!r.DataFim.HasValue || r.DataFim.Value >= DateTime.UtcNow));
+        }
+        
+        // Ordenar
+        var query = filtros.Ordenacao.ToLower() switch
+        {
+            "datainicio" => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.DataInicio) : 
+                reservas.OrderBy(r => r.DataInicio),
+            "datafim" => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.DataFim) : 
+                reservas.OrderBy(r => r.DataFim),
+            "usuario" => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.Usuario?.Nome) : 
+                reservas.OrderBy(r => r.Usuario?.Nome),
+            "periferico" => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.Periferico?.Nome) : 
+                reservas.OrderBy(r => r.Periferico?.Nome),
+            "status" => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.Status) : 
+                reservas.OrderBy(r => r.Status),
+            _ => filtros.OrdemDecrescente ? 
+                reservas.OrderByDescending(r => r.DataCadastro) : 
+                reservas.OrderBy(r => r.DataCadastro)
+        };
+        
+        return query.Select(MapToHistoricoDto);
+    }
+
+    private static HistoricoReservaDto MapToHistoricoDto(Reserva reserva)
+    {
+        return new HistoricoReservaDto
+        {
+            Id = reserva.Id,
+            UsuarioNome = reserva.Usuario?.Nome ?? "N/A",
+            UsuarioEmail = reserva.Usuario?.Email ?? "N/A",
+            PerifericoNome = reserva.Periferico?.Nome ?? "N/A",
+            PerifericoTipo = reserva.Periferico?.Tipo ?? "N/A",
+            PerifericoMarca = reserva.Periferico?.Marca ?? "N/A",
+            PerifericoModelo = reserva.Periferico?.Modelo ?? "N/A",
+            EquipeNome = reserva.Equipe?.Nome ?? "N/A",
+            DataInicio = reserva.DataInicio,
+            DataFim = reserva.DataFim,
+            DataCadastro = reserva.DataCadastro,
+            DataAprovacao = reserva.DataAprovacao,
+            DataAtualizacao = reserva.DataAtualizacao,
+            DataDevolucao = reserva.DataDevolucao,
+            Status = reserva.Status,
+            Observacoes = reserva.Observacoes,
+            MotivoRejeicao = reserva.MotivoRejeicao,
+            UsuarioAprovadorNome = reserva.UsuarioAprovador?.Nome,
+            UsuarioAprovadorEmail = reserva.UsuarioAprovador?.Email
+        };
+    }
 } 
