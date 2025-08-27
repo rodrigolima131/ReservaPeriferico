@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\ReservaPeriferico.Application\ReservaPeriferico.Application.csproj" />
@@ -22,6 +22,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>8503414c-2872-44f2-90c9-bda21182fda9</UserSecretsId>
   </PropertyGroup>
 
 </Project>

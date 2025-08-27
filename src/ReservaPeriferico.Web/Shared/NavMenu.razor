@@ -1,7 +1,9 @@
 ﻿
 
+@using System.Security.Claims
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
+@inject UserInfoService UserInfoService
 
 <MudNavMenu Class="mt-4">
     <!-- Informações do Usuário -->
@@ -9,10 +11,10 @@
         <MudStack Spacing="2">
             <MudText Typo="Typo.subtitle2" Style="color: white;">
                 <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
-                Administrador
+                @UserInfoService.GetUserName()
             </MudText>
-            <MudText Typo="Typo.caption"Style="color: white;">
-                admin@sistema.com
+            <MudText Typo="Typo.caption" Style="color: white;">
+                @UserInfoService.GetUserEmail()
             </MudText>
         </MudStack>
     </MudPaper>
@@ -42,6 +44,8 @@
         Histórico de Reservas
     </MudNavLink>
     
+
+    
     <MudDivider Class="my-2" />
     
     <!-- Botão de Alternar Tema -->
@@ -50,7 +54,7 @@
     </MudNavLink>
     
     <!-- Botão de Logout -->
-    <MudNavLink Href="logout" Icon="@Icons.Material.Filled.Logout" Color="Color.Error">
+    <MudNavLink Href="/auth/logout" Icon="@Icons.Material.Filled.Logout" Color="Color.Error">
         Sair
     </MudNavLink>
 </MudNavMenu>

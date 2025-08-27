@@ -4,10 +4,14 @@
 @using Microsoft.AspNetCore.Authentication.Google
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using System.Security.Claims
+@using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IJSRuntime JSRuntime
+@inject IAuthenticationService AuthenticationService
+@inject Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider SchemeProvider
+@inject UserInfoService UserInfoService
 
 
 <PageTitle>Login - Sistema de Reserva</PageTitle>
@@ -75,20 +79,17 @@
                         Login Corporativo
                     </MudText>
                     
-                    <MudButton Variant="Variant.Outlined" 
-                               Color="Color.Secondary" 
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
                                Size="Size.Large"
                                OnClick="LoginComGoogle"
                                StartIcon="@Icons.Material.Filled.AccountCircle"
                                FullWidth="true"
-                               Disabled="true">
+                               Style="background: linear-gradient(45deg, #4285f4, #34a853, #fbbc05, #ea4335); color: white; border: none; box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3); text-transform: none;">
                         Entrar com Google
                     </MudButton>
                     
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                        Configuração pendente
-                    </MudText>
+
                 </MudStack>
             </MudPaper>
         </MudStack>
@@ -107,6 +108,19 @@
 @code {
     private LoginModel loginModel = new();
     private bool processando = false;
+    
+    protected override void OnInitialized()
+    {
+        // Verificar se há erro de autenticação
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("error", out var error))
+        {
+            if (error == "remote_failure")
+            {
+                Snackbar.Add("Erro na autenticação com Google. Verifique as configurações.", Severity.Error);
+            }
+        }
+    }
 
     private async Task LoginComGoogle()
     {
@@ -114,22 +128,26 @@
         {
             processando = true;
             
-            // Redirecionar diretamente para o endpoint de autenticação do Google
-            var returnUrl = Uri.EscapeDataString("/dashboard");
-            var googleAuthUrl = $"/signin-google?returnUrl={returnUrl}";
+            // Método correto: Redirecionar para o endpoint HTTP
+            Console.WriteLine("Redirecionando para o endpoint de autenticação...");
+            Snackbar.Add("Redirecionando para Google...", Severity.Info);
             
-            // Usar JavaScript para redirecionar
-            await JSRuntime.InvokeVoidAsync("window.location.href", googleAuthUrl);
+            // Redirecionar para o endpoint HTTP que faz o Challenge
+            var authUrl = "/auth/google?returnUrl=/dashboard";
+            Navigation.NavigateTo(authUrl, true);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Erro ao fazer login: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Erro ao redirecionar: {ex.Message}");
+            Snackbar.Add($"Erro ao iniciar autenticação: {ex.Message}", Severity.Error);
         }
         finally
         {
             processando = false;
         }
     }
+
+
 
     private async Task LoginManual(EditContext context)
     {
@@ -153,8 +171,9 @@
                 // Aguardar um pouco para a mensagem ser exibida
                 await Task.Delay(1500);
                 
-                // Redirecionar diretamente para dashboard
-                Navigation.NavigateTo("/dashboard", true);
+                // Redirecionar para o endpoint que salva no UserSessionService
+                var loginManualUrl = "/auth/login-manual";
+                Navigation.NavigateTo(loginManualUrl, true);
             }
             else
             {
