@@ -45,11 +45,19 @@ ReservaPeriferico/
 
 1. Instale o .NET 9 ou superior
 2. Configure o banco PostgreSQL e ajuste a connection string em `appsettings.json`
-3. Execute:
+3. Configure o Google OAuth usando User Secrets:
+   ```sh
+   cd src/ReservaPeriferico.Web
+   dotnet user-secrets set "GoogleOAuth:ClientId" "SEU_GOOGLE_CLIENT_ID"
+   dotnet user-secrets set "GoogleOAuth:ClientSecret" "SEU_GOOGLE_CLIENT_SECRET"
+   ```
+4. Execute:
    ```sh
    dotnet ef database update --startup-project src/ReservaPeriferico.Web
    dotnet run --project src/ReservaPeriferico.Web
    ```
+
+> **📖 Para mais detalhes sobre configuração do Google OAuth, veja [USER_SECRETS_SETUP.md](src/ReservaPeriferico.Web/USER_SECRETS_SETUP.md)**
 
 ## Estrutura
 - `src/ReservaPeriferico.Core` - Entidades e regras de negócio
