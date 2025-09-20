@@ -60,8 +60,30 @@
     color: #333 !important;
 }
 
+/* Estilos para hover da tabela - modo claro */
 .mud-table tr:hover {
     background-color: #f8f9fa !important;
+}
+
+/* Estilos para hover da tabela - modo escuro */
+body.mud-theme-dark .mud-table tr:hover,
+[data-theme="dark"] .mud-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.mud-theme-dark .mud-table tr:hover td,
+[data-theme="dark"] .mud-table tr:hover td {
+    color: #ffffff !important;
+}
+
+body.mud-theme-dark .mud-table tr:hover .mud-text,
+[data-theme="dark"] .mud-table tr:hover .mud-text {
+    color: #ffffff !important;
+}
+
+body.mud-theme-dark .mud-table tr:hover .mud-chip,
+[data-theme="dark"] .mud-table tr:hover .mud-chip {
+    color: #ffffff !important;
 }
 
 /* Estilos para campos de busca */
