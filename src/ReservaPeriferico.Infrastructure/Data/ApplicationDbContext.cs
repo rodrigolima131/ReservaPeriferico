@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Reserva> reserva { get; set; }
     public DbSet<Equipe> Equipes { get; set; }
     public DbSet<UsuarioEquipe> UsuarioEquipes { get; set; }
+    public DbSet<Parametro> Parametros { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -290,6 +291,33 @@ public class ApplicationDbContext : DbContext
                 DataEntrada = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
         });
+
+        // Configuração da entidade Parametro
+        modelBuilder.Entity<Parametro>(entity =>
+        {
+            entity.ToTable("parametro");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Chave).HasColumnName("chave").IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Valor).HasColumnName("valor");
+            entity.Property(e => e.Descricao).HasColumnName("descricao").HasMaxLength(500);
+            entity.Property(e => e.Ativo).HasColumnName("ativo");
+            entity.Property(e => e.Tipo).HasColumnName("tipo");
+            entity.Property(e => e.DataCriacao).HasColumnName("data_criacao");
+            entity.Property(e => e.DataAtualizacao).HasColumnName("data_atualizacao");
+            entity.Property(e => e.UsuarioAtualizacao).HasColumnName("usuario_atualizacao").HasMaxLength(100);
+            
+            // Configurar DateTime para UTC
+            entity.Property(e => e.DataCriacao).HasConversion(
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc),
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            entity.Property(e => e.DataAtualizacao).HasConversion(
+                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v,
+                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+            
+            // Índice único para chave
+            entity.HasIndex(e => e.Chave).IsUnique();
+        });
     }
 
     public override int SaveChanges()
@@ -307,7 +335,7 @@ public class ApplicationDbContext : DbContext
     private void UpdateTimestamps()
     {
         var entries = ChangeTracker.Entries()
-            .Where(e => e.Entity is Periferico || e.Entity is Usuario || e.Entity is Reserva || e.Entity is Equipe)
+            .Where(e => e.Entity is Periferico || e.Entity is Usuario || e.Entity is Reserva || e.Entity is Equipe || e.Entity is Parametro)
             .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
 
         foreach (var entry in entries)
@@ -332,6 +360,10 @@ public class ApplicationDbContext : DbContext
                 {
                     equipe.DataCadastro = DateTime.UtcNow;
                 }
+                else if (entity is Parametro parametro)
+                {
+                    parametro.DataCriacao = DateTime.UtcNow;
+                }
             }
 
             if (entry.State == EntityState.Modified)
@@ -351,6 +383,10 @@ public class ApplicationDbContext : DbContext
                 else if (entity is Equipe equipe)
                 {
                     equipe.DataAtualizacao = DateTime.UtcNow;
+                }
+                else if (entity is Parametro parametro)
+                {
+                    parametro.DataAtualizacao = DateTime.UtcNow;
                 }
             }
         }

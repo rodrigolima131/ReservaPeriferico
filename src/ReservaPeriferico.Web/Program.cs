@@ -6,12 +6,16 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using ReservaPeriferico.Web.Services;
+using ReservaPeriferico.Application.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using ReservaPeriferico.Web.Services;
-
-
 using ReservaPeriferico.Application.Interfaces;
+using ReservaPeriferico.Application.Services;
+using ReservaPeriferico.Core.Enums;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Hangfire.Dashboard;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +27,38 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Configurar EmailSettings
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.AddScoped<DatabaseEmailSettings>();
+
 // Configurar serviços de infraestrutura
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// Configurar Hangfire
+var hangfireConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(hangfireConnectionString, new PostgreSqlStorageOptions
+    {
+        QueuePollInterval = TimeSpan.FromSeconds(15),
+        InvisibilityTimeout = TimeSpan.FromMinutes(30),
+        UseNativeDatabaseTransactions = true,
+        DistributedLockTimeout = TimeSpan.FromMinutes(10)
+    }));
+
+// Adicionar Hangfire Server
+builder.Services.AddHangfireServer(options =>
+{
+    options.ServerTimeout = TimeSpan.FromMinutes(4);
+    options.ServerCheckInterval = TimeSpan.FromSeconds(5);
+    options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
+});
+
+// Registrar serviços de job
+builder.Services.AddScoped<IEmailJobService, EmailJobService>();
+builder.Services.AddScoped<HangfireTestService>();
 
 // Configurar MudBlazor
 builder.Services.AddMudServices();
@@ -178,6 +212,17 @@ app.UseRouting();
        // Middleware de Autenticação e Autorização devem vir depois de UseRouting
        app.UseAuthentication();
        app.UseAuthorization();
+
+       // Configurar Hangfire Dashboard (apenas em desenvolvimento)
+       if (app.Environment.IsDevelopment())
+       {
+           app.UseHangfireDashboard("/hangfire", new DashboardOptions
+           {
+               Authorization = new[] { new HangfireAuthorizationFilter() },
+               DashboardTitle = "ReservaPeriferico - Jobs",
+               StatsPollingInterval = 2000
+           });
+       }
        
        // Middleware personalizado para salvar usuário Google automaticamente
        app.Use(async (context, next) =>
@@ -275,6 +320,35 @@ app.UseRouting();
            
            // Redirecionar para dashboard
            return Results.Redirect("/dashboard");
+       });
+       
+       // Endpoints de teste para Hangfire
+       app.MapGet("/test/hangfire/immediate", (HangfireTestService hangfireTest) =>
+       {
+           var jobId = hangfireTest.EnqueueTestJob();
+           return Results.Ok(new { message = "Job de teste enfileirado", jobId });
+       });
+       
+       app.MapGet("/test/hangfire/delayed/{delaySeconds:int}", (int delaySeconds, HangfireTestService hangfireTest) =>
+       {
+           var jobId = hangfireTest.EnqueueDelayedTestJob(delaySeconds);
+           return Results.Ok(new { message = $"Job de teste agendado para {delaySeconds} segundos", jobId });
+       });
+       
+       // Endpoints para teste de parâmetros
+       app.MapGet("/test/parametros", async (IParametroService parametroService) =>
+       {
+           var parametros = await parametroService.GetAllParametersAsync();
+           return Results.Ok(parametros);
+       });
+       
+       app.MapGet("/test/parametros/email", async (IParametroService parametroService) =>
+       {
+           var smtpServer = await parametroService.GetParameterAsync(ParametroChave.EmailSmtpServer);
+           var smtpPort = await parametroService.GetParameterAsync<int>(ParametroChave.EmailSmtpPort);
+           var fromEmail = await parametroService.GetParameterAsync(ParametroChave.EmailFromEmail);
+           
+           return Results.Ok(new { smtpServer, smtpPort, fromEmail });
        });
        
        // Endpoint para salvar usuário após autenticação Google

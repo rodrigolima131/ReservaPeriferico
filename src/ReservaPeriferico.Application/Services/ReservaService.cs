@@ -1,9 +1,10 @@
+using Microsoft.Extensions.Logging;
 using ReservaPeriferico.Application.DTOs;
 using ReservaPeriferico.Application.Interfaces;
 using ReservaPeriferico.Core.Entities;
-using ReservaPeriferico.Core.Interfaces;
-using ReservaPeriferico.Core.Exceptions;
 using ReservaPeriferico.Core.Enums;
+using ReservaPeriferico.Core.Exceptions;
+using ReservaPeriferico.Core.Interfaces;
 
 namespace ReservaPeriferico.Application.Services;
 
@@ -14,73 +15,79 @@ public class ReservaService : IReservaService
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IEquipeRepository _equipeRepository;
     private readonly IUsuarioEquipeRepository _usuarioEquipeRepository;
+    private readonly ReservaNotificationService _notificationService;
+    private readonly ILogger<ReservaService> _logger;
 
     public ReservaService(
         IReservaRepository reservaRepository,
         IPerifericoRepository perifericoRepository,
         IUsuarioRepository usuarioRepository,
         IEquipeRepository equipeRepository,
-        IUsuarioEquipeRepository usuarioEquipeRepository)
+        IUsuarioEquipeRepository usuarioEquipeRepository,
+        ILogger<ReservaService> logger,
+        ReservaNotificationService notificationService)
     {
         _reservaRepository = reservaRepository;
         _perifericoRepository = perifericoRepository;
         _usuarioRepository = usuarioRepository;
         _equipeRepository = equipeRepository;
         _usuarioEquipeRepository = usuarioEquipeRepository;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<ReservaDto?> GetByIdAsync(int id)
     {
         var reserva = await _reservaRepository.GetByIdAsync(id);
-        return reserva != null ? MapToDto(reserva) : null;
+        return reserva != null ? MapToReservaDto(reserva) : null;
     }
 
     public async Task<IEnumerable<ReservaDto>> GetAllAsync()
     {
         var reservas = await _reservaRepository.GetAllAsync();
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetByUsuarioAsync(int usuarioId)
     {
         var reservas = await _reservaRepository.GetByUsuarioAsync(usuarioId);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetByPerifericoAsync(int perifericoId)
     {
         var reservas = await _reservaRepository.GetByPerifericoAsync(perifericoId);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetByPeriodoAsync(DateTime dataInicio, DateTime dataFim)
     {
         var reservas = await _reservaRepository.GetByPeriodoAsync(dataInicio, dataFim);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetAtivasAsync()
     {
         var reservas = await _reservaRepository.GetAtivasAsync();
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetByEquipeAsync(int equipeId)
     {
         var reservas = await _reservaRepository.GetByEquipeAsync(equipeId);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetPendentesAsync(int equipeId)
     {
         var reservas = await _reservaRepository.GetPendentesAsync(equipeId);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<IEnumerable<ReservaDto>> GetAprovadasAsync(int equipeId)
     {
         var reservas = await _reservaRepository.GetAprovadasAsync(equipeId);
-        return reservas.Select(MapToDto);
+        return reservas.Select(MapToReservaDto);
     }
 
     public async Task<ReservaDto> CreateAsync(ReservaDto reservaDto)
@@ -104,7 +111,7 @@ public class ReservaService : IReservaService
 
         var reserva = MapToEntity(reservaDto);
         var createdReserva = await _reservaRepository.AddAsync(reserva);
-        return MapToDto(createdReserva);
+        return MapToReservaDto(createdReserva);
     }
 
     public async Task<ReservaDto> SolicitarReservaAsync(int usuarioId, SolicitarReservaDto solicitarReservaDto)
@@ -139,7 +146,30 @@ public class ReservaService : IReservaService
         };
 
         var createdReserva = await _reservaRepository.AddAsync(reserva);
-        return MapToDto(createdReserva);
+        var reservaDto = MapToReservaDto(createdReserva);
+
+        // Enviar notificações
+        try
+        {
+            var usuario = await _usuarioRepository.GetByIdAsync(usuarioId);
+            var perifericoInfo = await _perifericoRepository.GetByIdAsync(solicitarReservaDto.PerifericoId);
+            var administradorEquipe = await ObterAdministradorEquipeAsync(perifericoInfo.EquipeId);
+
+            if (usuario != null && perifericoInfo != null && administradorEquipe != null)
+            {
+                await _notificationService.NotificarSolicitacaoReservaAsync(
+                    reservaDto, 
+                    MapToUsuarioDto(usuario), 
+                    MapToPerifericoDto(perifericoInfo), 
+                    MapToUsuarioDto(administradorEquipe));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "falha ao notificar soliticação de reserva");
+        }
+
+        return reservaDto;
     }
 
     public async Task<ReservaDto> AprovarReservaAsync(int reservaId, int usuarioAprovadorId, AprovarReservaDto aprovarReservaDto)
@@ -178,7 +208,31 @@ public class ReservaService : IReservaService
         }
 
         var updatedReserva = await _reservaRepository.UpdateAsync(reserva);
-        return MapToDto(updatedReserva);
+        var reservaDto = MapToReservaDto(updatedReserva);
+
+        // Enviar notificação de aprovação/rejeição
+        try
+        {
+            var usuario = await _usuarioRepository.GetByIdAsync(reserva.UsuarioId);
+            var periferico = await _perifericoRepository.GetByIdAsync(reserva.PerifericoId);
+
+            if (usuario != null && periferico != null)
+            {
+                var status = aprovarReservaDto.NovoStatus == StatusReserva.Aprovada ? "Aprovada" : "Rejeitada";
+                await _notificationService.NotificarAprovacaoReservaAsync(
+                    reservaDto,
+                    MapToUsuarioDto(usuario),
+                    MapToPerifericoDto(periferico),
+                    status,
+                    aprovarReservaDto.Motivo);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "falha ao notificar aprovação da reserva");
+        }
+
+        return reservaDto;
     }
 
     public async Task<ReservaDto> CancelarReservaAsync(int reservaId, int usuarioId)
@@ -204,7 +258,28 @@ public class ReservaService : IReservaService
         reserva.DataAtualizacao = DateTime.UtcNow;
 
         var updatedReserva = await _reservaRepository.UpdateAsync(reserva);
-        return MapToDto(updatedReserva);
+
+        // Enviar notificação de aprovação/rejeição
+        try
+        {
+            var usuario = await _usuarioRepository.GetByIdAsync(reserva.UsuarioId);
+            var periferico = await _perifericoRepository.GetByIdAsync(reserva.PerifericoId);
+
+            if (usuario != null && periferico != null)
+            {
+                await _notificationService.NotificarCancelamentoReservaAsync(
+                    MapToReservaDto(reserva),
+                    MapToUsuarioDto(usuario),
+                    MapToPerifericoDto(periferico),
+                    "Cancelada");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "falha ao notificar aprovação da reserva");
+        }
+
+        return MapToReservaDto(updatedReserva);
     }
 
     public async Task<ReservaDto> UpdateAsync(int id, ReservaDto reservaDto)
@@ -225,7 +300,7 @@ public class ReservaService : IReservaService
         reserva.DataAtualizacao = DateTime.UtcNow;
         
         var updatedReserva = await _reservaRepository.UpdateAsync(reserva);
-        return MapToDto(updatedReserva);
+        return MapToReservaDto(updatedReserva);
     }
 
     public async Task DeleteAsync(int id)
@@ -258,7 +333,7 @@ public class ReservaService : IReservaService
         return usuarioEquipe != null && usuarioEquipe.IsAdministrador && usuarioEquipe.Usuario.Ativo;
     }
 
-    private static ReservaDto MapToDto(Reserva reserva)
+    private static ReservaDto MapToReservaDto(Reserva reserva)
     {
         return new ReservaDto
         {
@@ -385,6 +460,38 @@ public class ReservaService : IReservaService
         };
         
         return query.Select(MapToHistoricoDto);
+    }
+
+    private async Task<Usuario?> ObterAdministradorEquipeAsync(int equipeId)
+    {
+        var membrosEquipe = await _usuarioEquipeRepository.GetByEquipeIdAsync(equipeId);
+        var administrador = membrosEquipe.FirstOrDefault(ue => ue.IsAdministrador)?.Usuario;
+        return administrador;
+    }
+
+    private static UsuarioDto MapToUsuarioDto(Usuario usuario)
+    {
+        return new UsuarioDto
+        {
+            Id = usuario.Id,
+            Nome = usuario.Nome,
+            Email = usuario.Email,
+            Ativo = usuario.Ativo
+        };
+    }
+
+    private static PerifericoDto MapToPerifericoDto(Periferico periferico)
+    {
+        return new PerifericoDto
+        {
+            Id = periferico.Id,
+            Nome = periferico.Nome,
+            Tipo = periferico.Tipo,
+            Marca = periferico.Marca,
+            Modelo = periferico.Modelo,
+            Ativo = periferico.Ativo,
+            EquipeId = periferico.EquipeId
+        };
     }
 
     private static HistoricoReservaDto MapToHistoricoDto(Reserva reserva)
