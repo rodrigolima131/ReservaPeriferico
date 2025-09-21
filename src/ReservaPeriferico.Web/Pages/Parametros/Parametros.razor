@@ -1,0 +1,150 @@
+@page "/parametros"
+@using ReservaPeriferico.Core.Enums
+@using ReservaPeriferico.Application.Interfaces
+@inject IParametroService ParametroService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Parâmetros do Sistema</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h4" Class="mb-4">Configurações do Sistema</MudText>
+        
+        @if (isLoading)
+        {
+            <MudProgressCircular Indeterminate="true" Class="mx-auto" />
+        }
+        else
+        {
+            <MudTabs Elevation="2" Rounded="true" PanelClass="pa-6">
+                
+                <!-- Aba Configurações de Email -->
+                <MudTabPanel Text="Configurações de Email">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6" Class="mb-4">Configurações de Email</MudText>
+                        </MudItem>
+                        
+                        @foreach (var param in emailParameters)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudTextField @bind-Value="@param.Valor"
+                                             Label="@GetParameterLabel(param.Chave)"
+                                             Variant="Variant.Outlined"
+                                             Disabled="@isSaving"
+                                             Class="mb-2" />
+                            </MudItem>
+                        }
+                        
+                        <MudItem xs="12">
+                            <MudButton Variant="Variant.Filled"
+                                      Color="Color.Primary"
+                                      StartIcon="@Icons.Material.Filled.Save"
+                                      OnClick="SalvarConfiguracoesEmail"
+                                      Disabled="@isSaving"
+                                      Class="mt-4">
+                                @if (isSaving)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Salvar Configurações de Email
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+                
+            </MudTabs>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool isLoading = true;
+    private bool isSaving = false;
+    
+    private List<ParameterViewModel> emailParameters = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarParametros();
+        isLoading = false;
+    }
+    
+    private async Task CarregarParametros()
+    {
+        var allParameters = await ParametroService.GetAllParametersAsync();
+        
+        emailParameters = allParameters
+            .Where(p => p.Key.StartsWith("Email"))
+            .Select(p => new ParameterViewModel { Chave = p.Key, Valor = p.Value })
+            .ToList();
+            
+    }
+    
+    private async Task SalvarConfiguracoesEmail()
+    {
+        await SalvarParametros(emailParameters, "Configurações de email");
+    }
+    
+    
+    private async Task SalvarParametros(List<ParameterViewModel> parameters, string tipo)
+    {
+        isSaving = true;
+        try
+        {
+            var sucesso = true;
+            foreach (var param in parameters)
+            {
+                var resultado = await ParametroService.SetParameterAsync(param.Chave, param.Valor, "Sistema");
+                if (!resultado)
+                {
+                    sucesso = false;
+                }
+            }
+            
+            if (sucesso)
+            {
+                Snackbar.Add($"{tipo} salvas com sucesso!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Erro ao salvar algumas {tipo.ToLower()}", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao salvar {tipo.ToLower()}: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+    
+    private string GetParameterLabel(string chave)
+    {
+        return chave switch
+        {
+            "EmailSmtpServer" => "Servidor SMTP",
+            "EmailSmtpPort" => "Porta SMTP",
+            "EmailUsername" => "Usuário",
+            "EmailPassword" => "Senha",
+            "EmailEnableSsl" => "Habilitar SSL",
+            "EmailFromEmail" => "Email Remetente",
+            "EmailFromName" => "Nome Remetente",
+            "EmailTimeout" => "Timeout (ms)",
+            _ => chave
+        };
+    }
+    
+    public class ParameterViewModel
+    {
+        public string Chave { get; set; } = string.Empty;
+        public string Valor { get; set; } = string.Empty;
+    }
+}
+
+
+
+

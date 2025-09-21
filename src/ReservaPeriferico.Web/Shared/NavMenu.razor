@@ -1,9 +1,11 @@
 ﻿
 
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Hosting
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
 @inject UserInfoService UserInfoService
+@inject IWebHostEnvironment Environment
 
 <MudNavMenu Class="mt-4">
     <!-- Informações do Usuário -->
@@ -44,7 +46,16 @@
         Histórico de Reservas
     </MudNavLink>
     
-
+    @if (Environment.IsDevelopment())
+    {
+        <MudText Typo="Typo.subtitle2" Class="ml-4 mb-2 mt-4" Color="Color.Secondary">Desenvolvedor</MudText>
+        <MudNavLink Href="/hangfire" Icon="@Icons.Material.Filled.Work" Target="_blank">
+            Hangfire Dashboard
+        </MudNavLink>
+        <MudNavLink Href="parametros" Icon="@Icons.Material.Filled.Settings">
+            Parâmetros do Sistema
+        </MudNavLink>
+    }
     
     <MudDivider Class="my-2" />
     
