@@ -1,0 +1,25 @@
+# Estrutura banco de dados 
+
+Visão Geral
+
+Usamos Entity Framework Core (EF Core) para versionar e aplicar o esquema do banco por meio de Migrations.
+Todas as alterações de schema (criar/alterar/excluir tabelas, colunas, índices, FKs) devem passar por migrations — nada de alterar direto no banco.
+
+- Provider alvo: (PostgreSQL)
+- Projeto das migrations: ReservaPeriferico.Infrastructure
+- Pasta padrão: ReservaPeriferico.Infrastructure/Migrations
+- Tabela de histórico: __EFMigrationsHistory (controla o que já foi aplicado)
+
+# 1) Gerar a migration a partir das mudanças no DbContext/Models
+dotnet ef migrations add CriarTabelaEquipe --project ReservaPeriferico.Infrastructure --startup-project <Projeto.Startup>
+
+# 2) Aplicar localmente no banco configurado
+dotnet ef database update --project ReservaPeriferico.Infrastructure --startup-project <Projeto.Startup>
+
+*Exemplos para criação do migration*
+- Navegue para o caminho ReservaPeriferico.Infrastructure/Migrations.
+- Use padrões de nomeclatura para a criação dos migrations.
+- Nomes: 
+    - Ajuste para realizar o ajuste de alguma tabela. exemplo: AjusteEquipe. 
+    - Criar para realizar a criação de alguma tabela. exemplo: CriarTabelaEquipe. 
+- Em caso de dúvidas, valide os migrations existentes. 
