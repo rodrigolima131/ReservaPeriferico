@@ -2,6 +2,7 @@
 @inject NavigationManager Navigation
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
+@inject UserInfoService UserInfoService
 
 <MudThemeProvider Theme="@ThemeService.CurrentTheme" />
 <MudDialogProvider />
@@ -45,7 +46,7 @@
 @code {
     private bool _drawerOpen = true;
     private bool IsLoginPage => Navigation.Uri.EndsWith("/") || Navigation.Uri.EndsWith("/login");
-    private bool ShouldShowMenu => !IsLoginPage; // Simplificado: sempre mostrar menu exceto na página de login
+    private bool ShouldShowMenu => !IsLoginPage && UserInfoService.IsAuthenticated(); // Mostrar menu apenas se não for página de login E estiver autenticado
 
     protected override async Task OnInitializedAsync()
     {

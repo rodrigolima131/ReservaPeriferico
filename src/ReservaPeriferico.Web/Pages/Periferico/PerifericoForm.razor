@@ -1,5 +1,7 @@
 @page "/periferico/novo"
 @page "/periferico/editar/{Id:int}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using ReservaPeriferico.Application.Interfaces
 @using ReservaPeriferico.Application.DTOs

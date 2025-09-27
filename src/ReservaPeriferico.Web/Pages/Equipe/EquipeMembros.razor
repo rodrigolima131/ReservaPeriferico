@@ -1,4 +1,6 @@
 @page "/equipe/membros/{Id:int}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using ReservaPeriferico.Application.Interfaces
 @using ReservaPeriferico.Application.DTOs
