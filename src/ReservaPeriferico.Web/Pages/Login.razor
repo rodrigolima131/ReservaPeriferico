@@ -72,19 +72,20 @@
             </MudDivider>
 
             <!-- Login Google -->
-            <MudPaper Class="pa-4" Elevation="1" Style="border: 1px solid var(--mud-palette-secondary);">
+            <MudPaper Class="pa-4" Elevation="1" Style="border: 2px solid black;">
                 <MudStack Spacing="3">
-                    <MudText Typo="Typo.h6" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" />
+                    <MudText Typo="Typo.h6" Color="Color.Default" Style="color: black;">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Class="mr-2" Style="color: black;" />
                         Login Corporativo
                     </MudText>
                     
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Secondary" 
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Default" 
                                Size="Size.Large"
                                OnClick="LoginComGoogle"
-                               StartIcon="@Icons.Material.Filled.AccountCircle"
-                               FullWidth="true">
+                               FullWidth="true"
+                               Style="background-color: white; border: 2px solid black; color: black; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <img src="/icon_google.png" alt="Google" style="width: 20px; height: 20px; position: absolute; left: 16px;" />
                         Entrar com Google
                     </MudButton>
                     
@@ -131,8 +132,15 @@
             Console.WriteLine("Redirecionando para o endpoint de autenticação...");
             Snackbar.Add("Redirecionando para Google...", Severity.Info);
             
+            // Verificar se deve forçar seleção de conta
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            var promptSelectAccount = query.ContainsKey("prompt") && query["prompt"] == "select_account";
+            
             // Redirecionar para o endpoint HTTP que faz o Challenge
-            var authUrl = "/auth/google?returnUrl=/dashboard";
+            var authUrl = promptSelectAccount 
+                ? "/auth/google?returnUrl=/dashboard&prompt=select_account"
+                : "/auth/google?returnUrl=/dashboard";
             Navigation.NavigateTo(authUrl, true);
         }
         catch (Exception ex)

@@ -32,12 +32,12 @@ namespace ReservaPeriferico.Web.Services
 
         public string GetUserName()
         {
-            return _userName ?? "Usuário do Sistema";
+            return _isAuthenticated ? (_userName ?? "Usuário do Sistema") : "Não autenticado";
         }
 
         public string GetUserEmail()
         {
-            return _userEmail ?? "Sistema de Reserva";
+            return _isAuthenticated ? (_userEmail ?? "Sistema de Reserva") : "Não autenticado";
         }
 
         public bool IsAuthenticated()

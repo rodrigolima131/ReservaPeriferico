@@ -41,12 +41,12 @@ namespace ReservaPeriferico.Web.Services
                         return $"{givenName} {surname}".Trim();
                 }
                 
-                return "Usuário do Sistema";
+                return "Não autenticado";
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Erro no GetUserName: {ex.Message}");
-                return "Usuário do Sistema";
+                return "Não autenticado";
             }
         }
 
@@ -72,12 +72,12 @@ namespace ReservaPeriferico.Web.Services
                         return email;
                 }
                 
-                return "Sistema de Reserva";
+                return "Não autenticado";
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Erro no GetUserEmail: {ex.Message}");
-                return "Sistema de Reserva";
+                return "Não autenticado";
             }
         }
 
@@ -85,6 +85,13 @@ namespace ReservaPeriferico.Web.Services
         {
             try
             {
+                // Primeiro verificar UserSessionService (armazenamento global)
+                if (_userSessionService?.IsAuthenticated() == true)
+                {
+                    return true;
+                }
+                
+                // Fallback para HttpContext
                 var user = _httpContextAccessor.HttpContext?.User;
                 return user?.Identity?.IsAuthenticated == true;
             }

@@ -141,6 +141,22 @@ builder.Services.AddAuthentication(options =>
                var name = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
                var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
                
+               // VALIDAÇÃO DE DOMÍNIO DE E-MAIL (COMENTADO PARA DESENVOLVIMENTO)
+               // TODO: Descomentar quando implementar em produção
+               // if (!string.IsNullOrEmpty(email))
+               // {
+               //     // Lista de domínios autorizados (configurar conforme necessário)
+               //     var dominiosAutorizados = new[] { "@empresa.com", "@totvs.com.br" };
+               //     
+               //     if (!dominiosAutorizados.Any(dominio => email.EndsWith(dominio, StringComparison.OrdinalIgnoreCase)))
+               //     {
+               //         Console.WriteLine($"Acesso negado para domínio não autorizado: {email}");
+               //         context.Response.Redirect("/login?error=domain_not_allowed");
+               //         context.HandleResponse();
+               //         return Task.CompletedTask;
+               //     }
+               // }
+               
                // IMPORTANTE: Salvar no UserSessionService através do HttpContext
                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(email))
                {
@@ -212,6 +228,34 @@ app.UseRouting();
        // Middleware de Autenticação e Autorização devem vir depois de UseRouting
        app.UseAuthentication();
        app.UseAuthorization();
+       
+       // Middleware para forçar redirecionamento para login em rotas protegidas
+       app.Use(async (context, next) =>
+       {
+           var path = context.Request.Path.Value?.ToLower();
+           
+           // Lista de rotas que requerem autenticação
+           var protectedRoutes = new[] { "/minhas-reservas", "/reserva", "/equipes", "/perifericos", "/gerenciar-reservas", "/historico-reservas", "/parametros" };
+           
+           // NÃO bloquear rotas de autenticação
+           var authRoutes = new[] { "/login", "/signin-google", "/auth/", "/_blazor", "/_framework", "/dashboard" };
+           
+           if (protectedRoutes.Any(route => path?.StartsWith(route) == true) && 
+               !authRoutes.Any(route => path?.StartsWith(route) == true))
+           {
+               // Verificar também UserSessionService como fallback
+               var userSessionService = context.RequestServices.GetRequiredService<UserSessionService>();
+               var sessionAuth = userSessionService.IsAuthenticated();
+               
+               if (context.User?.Identity?.IsAuthenticated != true && !sessionAuth)
+               {
+                   context.Response.Redirect("/login");
+                   return;
+               }
+           }
+           
+           await next();
+       });
 
        // Configurar Hangfire Dashboard (apenas em desenvolvimento)
        if (app.Environment.IsDevelopment())
@@ -292,10 +336,19 @@ app.UseRouting();
        app.MapGet("/auth/google", async (HttpContext context) =>
        {
            var returnUrl = context.Request.Query["returnUrl"].FirstOrDefault() ?? "/dashboard";
+           var prompt = context.Request.Query["prompt"].FirstOrDefault();
+           
            var properties = new AuthenticationProperties { RedirectUri = returnUrl };
+           
+           // Se prompt=select_account, forçar seleção de conta
+           if (prompt == "select_account")
+           {
+               properties.Items["prompt"] = "select_account";
+           }
            
            Console.WriteLine("=== AUTH/GOOGLE ENDPOINT CHAMADO ===");
            Console.WriteLine($"ReturnUrl: {returnUrl}");
+           Console.WriteLine($"Prompt: {prompt}");
            Console.WriteLine($"RedirectUri: {properties.RedirectUri}");
            Console.WriteLine("=== INICIANDO CHALLENGE ===");
            
@@ -308,8 +361,15 @@ app.UseRouting();
 
        app.MapGet("/auth/logout", async (HttpContext context) =>
        {
+           // Limpar sessão local
            await context.SignOutAsync();
-           return Results.Redirect("/login");
+           
+           // Limpar UserSessionService
+           var userSessionService = context.RequestServices.GetRequiredService<UserSessionService>();
+           userSessionService.ClearUserInfo();
+           
+           // Redirecionar para login com parâmetro para forçar seleção de conta
+           return Results.Redirect("/login?prompt=select_account");
        });
        
        // Endpoint para login manual

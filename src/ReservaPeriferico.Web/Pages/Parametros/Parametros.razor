@@ -1,4 +1,6 @@
 @page "/parametros"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 @using ReservaPeriferico.Core.Enums
 @using ReservaPeriferico.Application.Interfaces
 @inject IParametroService ParametroService
