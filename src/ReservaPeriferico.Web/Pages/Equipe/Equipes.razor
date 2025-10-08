@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject UserInfoService UserInfoService
 
 <PageTitle>Gerenciar Equipes</PageTitle>
 
@@ -115,15 +116,33 @@
                 </MudTd>
                 <MudTd DataLabel="Ações">
                     <MudStack Row="true" Spacing="1" Justify="Justify.Center">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
-                                       OnClick="@(() => EditarEquipe(context))" 
-                                       Size="Size.Small" Title="Editar equipe (apenas administrador)" />
+                        @if (PodeEditarEquipe(context.Id))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
+                                           OnClick="@(() => EditarEquipe(context))" 
+                                           Size="Size.Small" Title="Editar equipe" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" 
+                                           Disabled="true"
+                                           Size="Size.Small" Title="Apenas o administrador pode editar esta equipe" />
+                        }
                         <MudIconButton Icon="@Icons.Material.Filled.People" Color="Color.Info" 
                                        OnClick="@(() => VisualizarMembros(context))" 
                                        Size="Size.Small" Title="Ver membros da equipe" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
-                                       OnClick="@(() => ExcluirEquipe(context))" 
-                                       Size="Size.Small" Title="Excluir equipe (apenas administrador)" />
+                        @if (PodeEditarEquipe(context.Id))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                                           OnClick="@(() => ExcluirEquipe(context))" 
+                                           Size="Size.Small" Title="Excluir equipe" />
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" 
+                                           Disabled="true"
+                                           Size="Size.Small" Title="Apenas o administrador pode excluir esta equipe" />
+                        }
                     </MudStack>
                 </MudTd>
             </RowTemplate>
@@ -140,6 +159,8 @@
     private string searchString = "";
     private string filtroNome = string.Empty;
     private Dictionary<int, UsuarioDto> usuariosCache = new();
+    private Dictionary<int, bool> permissoesEdicao = new();
+    private int? usuarioLogadoId = null;
 
     private IEnumerable<EquipeDto> equipesFiltradas => equipes.Where(FilterFunc);
 
@@ -147,6 +168,7 @@
     {
         await LoadEquipes();
         await CarregarUsuarios();
+        await CarregarPermissoesEdicao();
     }
 
     private async Task LoadEquipes()
@@ -175,9 +197,50 @@
         usuariosCache = usuarios.ToDictionary(u => u.Id, u => u);
     }
 
+    private async Task CarregarPermissoesEdicao()
+    {
+        try
+        {
+            // Obter o email do usuário logado
+            var emailUsuarioLogado = UserInfoService.GetUserEmail();
+            
+            if (string.IsNullOrEmpty(emailUsuarioLogado) || emailUsuarioLogado == "Não autenticado")
+            {
+                return;
+            }
+
+            // Buscar o usuário no banco pelo email
+            var usuarios = await UsuarioService.GetAllAsync();
+            var usuarioLogado = usuarios.FirstOrDefault(u => u.Email == emailUsuarioLogado);
+            
+            if (usuarioLogado == null)
+            {
+                return;
+            }
+
+            usuarioLogadoId = usuarioLogado.Id;
+
+            // Verificar permissões para cada equipe
+            foreach (var equipe in equipes)
+            {
+                var isAdministrador = await EquipeService.UsuarioIsAdministradorAsync(equipe.Id, usuarioLogado.Id);
+                permissoesEdicao[equipe.Id] = isAdministrador;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar permissões: {ex.Message}", Severity.Error);
+        }
+    }
+
     private string ObterNomeAdministrador(int id)
     {
         return usuariosCache.TryGetValue(id, out var usuario) ? usuario.Nome : "-";
+    }
+
+    private bool PodeEditarEquipe(int equipeId)
+    {
+        return permissoesEdicao.TryGetValue(equipeId, out var podeEditar) && podeEditar;
     }
 
     private void NovaEquipe()
@@ -207,6 +270,10 @@
                 await EquipeService.DeleteAsync(equipe.Id);
                 await LoadEquipes();
                 Snackbar.Add("Equipe excluída com sucesso!", Severity.Success);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Snackbar.Add($"Erro de permissão: {ex.Message}", Severity.Error);
             }
             catch (Exception ex)
             {

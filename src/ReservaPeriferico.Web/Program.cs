@@ -135,7 +135,7 @@ builder.Services.AddAuthentication(options =>
                context.HandleResponse();
                return Task.CompletedTask;
            },
-           OnTicketReceived = context =>
+           OnTicketReceived = async context =>
            {
                // Extrair informações do usuário para salvar no UserSessionService
                var name = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
@@ -164,12 +164,47 @@ builder.Services.AddAuthentication(options =>
                    var userSessionService = context.HttpContext.RequestServices.GetRequiredService<UserSessionService>();
                    userSessionService.SetUserInfo(name, email);
                    Console.WriteLine($"=== USUÁRIO SALVO NO SESSION SERVICE: {name} ({email}) ===");
+                   
+                   // ✅ ADICIONAR ID DO USUÁRIO NOS CLAIMS
+                   try
+                   {
+                       var usuarioService = context.HttpContext.RequestServices.GetRequiredService<IUsuarioService>();
+                       var usuarios = await usuarioService.GetAllAsync();
+                       var usuario = usuarios.FirstOrDefault(u => u.Email == email);
+                       
+                       if (usuario != null)
+                       {
+                           // Adicionar o ID do usuário aos claims
+                           var claims = new List<System.Security.Claims.Claim>
+                           {
+                               new System.Security.Claims.Claim("UserId", usuario.Id.ToString()),
+                               new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, usuario.Id.ToString())
+                           };
+                           
+                           var identity = new System.Security.Claims.ClaimsIdentity(claims, "Google");
+                           var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+                           
+                           // Adicionar os novos claims ao principal existente
+                           var existingIdentity = context.Principal?.Identity as System.Security.Claims.ClaimsIdentity;
+                           if (existingIdentity != null)
+                           {
+                               foreach (var claim in claims)
+                               {
+                                   existingIdentity.AddClaim(claim);
+                               }
+                           }
+                           
+                           Console.WriteLine($"=== ✅ ID DO USUÁRIO ADICIONADO AOS CLAIMS: {usuario.Id} ===");
+                       }
+                   }
+                   catch (Exception ex)
+                   {
+                       Console.WriteLine($"=== ❌ ERRO AO ADICIONAR ID AOS CLAIMS: {ex.Message} ===");
+                   }
                }
                
                // NÃO redirecionar aqui - deixar o fluxo normal continuar para o middleware salvar no banco
                Console.WriteLine("=== TICKET RECEIVED - CONTINUANDO FLUXO NORMAL ===");
-               
-               return Task.CompletedTask;
            },
            OnCreatingTicket = context =>
            {

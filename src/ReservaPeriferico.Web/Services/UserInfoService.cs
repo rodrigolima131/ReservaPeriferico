@@ -101,9 +101,38 @@ namespace ReservaPeriferico.Web.Services
             }
         }
 
+        public int? GetUserId()
+        {
+            try
+            {
+                // ✅ Obter ID do usuário dos Claims
+                var user = _httpContextAccessor.HttpContext?.User;
+                
+                if (user?.Identity?.IsAuthenticated == true)
+                {
+                    // Tentar obter o ID dos claims
+                    var userIdClaim = user.FindFirst("UserId")?.Value ?? 
+                                    user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    
+                    if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+                    {
+                        return userId;
+                    }
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro no GetUserId: {ex.Message}");
+                return null;
+            }
+        }
+
         // Métodos assíncronos para compatibilidade (delegam para os síncronos)
         public async Task<string> GetUserNameAsync() => GetUserName();
         public async Task<string> GetUserEmailAsync() => GetUserEmail();
         public async Task<bool> IsAuthenticatedAsync() => IsAuthenticated();
+        public async Task<int?> GetUserIdAsync() => GetUserId();
     }
 } 

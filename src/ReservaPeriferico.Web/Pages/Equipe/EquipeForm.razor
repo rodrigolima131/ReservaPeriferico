@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
+@inject UserInfoService UserInfoService
 
 <PageTitle>@(editingEquipe?.Id > 0 ? "Editar" : "Nova") Equipe</PageTitle>
 
@@ -30,7 +31,7 @@
                                OnClick="VoltarParaLista" Class="custom-button-secondary">
                         Voltar
                     </MudButton>
-                    <MudButton Color="Color.Primary" OnClick="SalvarEquipe" Disabled="!success" 
+                    <MudButton Color="Color.Primary" OnClick="SalvarEquipe" Disabled="!success || !podeEditar" 
                                Variant="Variant.Filled" Class="custom-button-primary"
                                StartIcon="@Icons.Material.Filled.Save">
                         Salvar
@@ -38,23 +39,36 @@
                 </MudStack>
             </MudStack>
 
+            <!-- Alerta de permissão -->
+            @if (!podeEditar && Id.HasValue && Id.Value > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    <MudText Typo="Typo.body2">
+                        <strong>Atenção:</strong> Você não tem permissão para editar esta equipe. 
+                        Apenas o administrador da equipe pode fazer alterações.
+                    </MudText>
+                </MudAlert>
+            }
+
             <!-- Formulário -->
             <MudForm @ref="form" @bind-IsValid="@success" ValidationDelay="0">
                 <MudGrid>
                     <MudItem xs="12">
                         <MudTextField @bind-Value="editingEquipe.Nome" Label="Nome da Equipe *" Required="true" 
                                        Variant="Variant.Outlined" Validation="@(new Func<string, IEnumerable<string>>(ValidateNome))"
-                                       Title="Nome da equipe (obrigatório)" />
+                                       Title="Nome da equipe (obrigatório)" Disabled="!podeEditar" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField @bind-Value="editingEquipe.Descricao" Label="Descrição" Lines="3" 
                                        Variant="Variant.Outlined" Title="Descrição da equipe (opcional)"
                                        Validation="@(new Func<string, IEnumerable<string>>(ValidateDescricao))"
+                                       Disabled="!podeEditar"
                                        MaxLength="500" Counter="500" Immediate="true" />
                     </MudItem>
                     <MudItem xs="12">
                         <MudSelect @bind-Value="editingEquipe.UsuarioAdministradorId" Label="Administrador da Equipe *" 
-                                   Variant="Variant.Outlined" Required="true" Validation="@(new Func<int, IEnumerable<string>>(ValidateAdministrador))">
+                                   Variant="Variant.Outlined" Required="true" Validation="@(new Func<int, IEnumerable<string>>(ValidateAdministrador))"
+                                   Disabled="!podeEditar">
                             <MudSelectItem Value="0">Selecione um administrador</MudSelectItem>
                             @foreach (var usuario in usuariosDisponiveis)
                             {
@@ -82,7 +96,7 @@
                             }
                         }
                         <MudStack Row="true" Spacing="2">
-                            <MudSelect @bind-Value="novoMembroId" Label="Adicionar membro" Variant="Variant.Outlined" Style="min-width: 300px;">
+                            <MudSelect @bind-Value="novoMembroId" Label="Adicionar membro" Variant="Variant.Outlined" Style="min-width: 300px;" Disabled="!podeEditar">
                                 <MudSelectItem Value="0">Selecione um usuário</MudSelectItem>
                                 @foreach (var usuario in usuariosDisponiveis.Where(u => u.Id != editingEquipe.UsuarioAdministradorId))
                                 {
@@ -90,7 +104,7 @@
                                 }
                             </MudSelect>
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
-                                       OnClick="AdicionarMembro" Disabled="novoMembroId == 0">
+                                       OnClick="AdicionarMembro" Disabled="novoMembroId == 0 || !podeEditar">
                                 Adicionar
                             </MudButton>
                         </MudStack>
@@ -121,7 +135,8 @@
                                         <MudTd DataLabel="Ações">
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
                                                          OnClick="@(() => RemoverMembro(context.Id))" 
-                                                         Size="Size.Small" Title="Remover membro" />
+                                                         Size="Size.Small" Title="Remover membro" 
+                                                         Disabled="!podeEditar" />
                                         </MudTd>
                                     </RowTemplate>
                                 </MudTable>
@@ -172,11 +187,14 @@
     private bool success;
     private MudForm form = default!;
     private string membrosHash = string.Empty; // Campo hidden para detectar mudanças
+    private bool podeEditar = true;
+    private int? usuarioLogadoId = null;
 
     protected override async Task OnInitializedAsync()
     {
         await CarregarUsuarios();
         await CarregarEquipe();
+        await VerificarPermissoes();
         
         // Garantir que o hash dos membros seja atualizado após carregar tudo
         membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id));
@@ -191,6 +209,52 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Erro ao carregar usuários: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task VerificarPermissoes()
+    {
+        try
+        {
+            // Se não é modo de edição, pode editar (modo novo)
+            if (!Id.HasValue || Id.Value <= 0)
+            {
+                podeEditar = true;
+                return;
+            }
+
+            // Obter o email do usuário logado
+            var emailUsuarioLogado = UserInfoService.GetUserEmail();
+            
+            if (string.IsNullOrEmpty(emailUsuarioLogado) || emailUsuarioLogado == "Não autenticado")
+            {
+                podeEditar = false;
+                return;
+            }
+
+            // Buscar o usuário no banco pelo email
+            var usuarioLogado = usuariosDisponiveis.FirstOrDefault(u => u.Email == emailUsuarioLogado);
+            
+            if (usuarioLogado == null)
+            {
+                podeEditar = false;
+                return;
+            }
+
+            usuarioLogadoId = usuarioLogado.Id;
+
+            // Verificar se o usuário é administrador da equipe
+            podeEditar = await EquipeService.UsuarioIsAdministradorAsync(editingEquipe.Id, usuarioLogado.Id);
+
+            if (!podeEditar)
+            {
+                Snackbar.Add("Você não tem permissão para editar esta equipe. Apenas o administrador pode fazer alterações.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao verificar permissões: {ex.Message}", Severity.Error);
+            podeEditar = false;
         }
     }
 
@@ -251,6 +315,12 @@
 
     private async void AdicionarMembro()
     {
+        if (!podeEditar)
+        {
+            Snackbar.Add("Você não tem permissão para adicionar membros a esta equipe.", Severity.Error);
+            return;
+        }
+
         if (novoMembroId > 0)
         {
             var usuario = usuariosDisponiveis.FirstOrDefault(u => u.Id == novoMembroId);
@@ -278,6 +348,12 @@
 
     private async void RemoverMembro(int id)
     {
+        if (!podeEditar)
+        {
+            Snackbar.Add("Você não tem permissão para remover membros desta equipe.", Severity.Error);
+            return;
+        }
+
         var membro = membrosSelecionados.FirstOrDefault(m => m.Id == id);
         if (membro != null)
         {
@@ -315,6 +391,13 @@
     {
         try
         {
+            // Verificar permissões antes de salvar
+            if (!podeEditar)
+            {
+                Snackbar.Add("Você não tem permissão para editar esta equipe.", Severity.Error);
+                return;
+            }
+
             // Validar o formulário antes de prosseguir
             await form.Validate();
             if (!form.IsValid)
@@ -353,6 +436,10 @@
             }
             
             Navigation.NavigateTo("/equipes");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Snackbar.Add($"Erro de permissão: {ex.Message}", Severity.Error);
         }
         catch (Exception ex)
         {
