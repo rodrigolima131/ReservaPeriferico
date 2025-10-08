@@ -434,32 +434,6 @@ app.UseRouting();
            return Results.Ok(new { smtpServer, smtpPort, fromEmail });
        });
        
-       // Endpoint de teste para verificar usuários no banco
-       app.MapGet("/test/usuarios", async (IUsuarioService usuarioService) =>
-       {
-           try
-           {
-               var usuarios = await usuarioService.GetAllAsync();
-               var usuariosList = usuarios.Select(u => new { 
-                   Id = u.Id, 
-                   Nome = u.Nome, 
-                   Email = u.Email, 
-                   Matricula = u.Matricula,
-                   Ativo = u.Ativo,
-                   DataCadastro = u.DataCadastro
-               }).ToList();
-               
-               return Results.Ok(new { 
-                   TotalUsuarios = usuariosList.Count,
-                   Usuarios = usuariosList
-               });
-           }
-           catch (Exception ex)
-           {
-               return Results.Problem($"Erro ao buscar usuários: {ex.Message}");
-           }
-       });
-       
        // Endpoint para salvar usuário após autenticação Google
        app.MapGet("/auth/save-user", async (HttpContext context, IUsuarioService usuarioService, UserSessionService userSessionService) =>
        {
