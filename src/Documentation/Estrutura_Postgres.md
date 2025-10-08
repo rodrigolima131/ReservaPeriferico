@@ -10,11 +10,18 @@ Todas as alterações de schema (criar/alterar/excluir tabelas, colunas, índice
 - Pasta padrão: ReservaPeriferico.Infrastructure/Migrations
 - Tabela de histórico: __EFMigrationsHistory (controla o que já foi aplicado)
 
-# 1) Gerar a migration a partir das mudanças no DbContext/Models
-dotnet ef migrations add CriarTabelaEquipe --project ReservaPeriferico.Infrastructure --startup-project <Projeto.Startup>
+# 1) Gerar a migration usar exemplo: 
+    executar comando do da pasta raiz ReservaPeriferico
+        dotnet ef migrations add NomeMigration `
+        --project src/ReservaPeriferico.Infrastructure `
+        --startup-project src/ReservaPeriferico.Web `
+        --output-dir Migrations
 
-# 2) Aplicar localmente no banco configurado
-dotnet ef database update --project ReservaPeriferico.Infrastructure --startup-project <Projeto.Startup>
+# 2)Para remover ultimo migration, usar exemplo: 
+    executar comando do da pasta raiz ReservaPeriferico
+        dotnet ef migrations remove `
+        --project src/ReservaPeriferico.Infrastructure `
+        --startup-project src/ReservaPeriferico.Web
 
 *Exemplos para criação do migration*
 - Navegue para o caminho ReservaPeriferico.Infrastructure/Migrations.
