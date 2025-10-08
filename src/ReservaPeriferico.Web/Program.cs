@@ -9,7 +9,6 @@ using ReservaPeriferico.Web.Services;
 using ReservaPeriferico.Application.Configuration;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
-using ReservaPeriferico.Web.Services;
 using ReservaPeriferico.Application.Interfaces;
 using ReservaPeriferico.Application.Services;
 using ReservaPeriferico.Core.Enums;
@@ -45,7 +44,8 @@ builder.Services.AddHangfire(configuration => configuration
         QueuePollInterval = TimeSpan.FromSeconds(15),
         InvisibilityTimeout = TimeSpan.FromMinutes(30),
         UseNativeDatabaseTransactions = true,
-        DistributedLockTimeout = TimeSpan.FromMinutes(10)
+        DistributedLockTimeout = TimeSpan.FromMinutes(10),
+        SchemaName = "hangfire"
     }));
 
 // Adicionar Hangfire Server
@@ -163,11 +163,11 @@ builder.Services.AddAuthentication(options =>
                    // Obter o UserSessionService do HttpContext
                    var userSessionService = context.HttpContext.RequestServices.GetRequiredService<UserSessionService>();
                    userSessionService.SetUserInfo(name, email);
+                   Console.WriteLine($"=== USUÁRIO SALVO NO SESSION SERVICE: {name} ({email}) ===");
                }
                
-               // Redirecionar direto para dashboard (o usuário já foi salvo na primeira vez)
-               context.Response.Redirect("/dashboard");
-               context.HandleResponse();
+               // NÃO redirecionar aqui - deixar o fluxo normal continuar para o middleware salvar no banco
+               Console.WriteLine("=== TICKET RECEIVED - CONTINUANDO FLUXO NORMAL ===");
                
                return Task.CompletedTask;
            },
@@ -271,14 +271,25 @@ app.UseRouting();
        // Middleware personalizado para salvar usuário Google automaticamente
        app.Use(async (context, next) =>
        {
+           Console.WriteLine($"=== MIDDLEWARE EXECUTANDO: {context.Request.Path} ===");
+           Console.WriteLine($"=== USUÁRIO AUTENTICADO: {context.User?.Identity?.IsAuthenticated} ===");
+           
            // Verificar se é uma requisição para dashboard e se o usuário está autenticado
            if (context.Request.Path.StartsWithSegments("/dashboard") && 
                context.User?.Identity?.IsAuthenticated == true)
            {
                try
                {
+                   Console.WriteLine("=== INICIANDO SALVAMENTO DE USUÁRIO NO BANCO ===");
+                   
                    // Verificar se precisa salvar/atualizar usuário
                    var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                   var name = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                   var givenName = context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+                   var surname = context.User.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
+                   
+                   Console.WriteLine($"=== DADOS DO USUÁRIO: Email={email}, Name={name}, GivenName={givenName}, Surname={surname} ===");
+                   
                    if (!string.IsNullOrEmpty(email))
                    {
                        // Obter o serviço de usuário
@@ -288,13 +299,10 @@ app.UseRouting();
                        var usuarios = await usuarioService.GetAllAsync();
                        var usuarioExistente = usuarios.FirstOrDefault(u => u.Email == email);
                        
+                       Console.WriteLine($"=== USUÁRIO EXISTENTE: {(usuarioExistente != null ? $"ID {usuarioExistente.Id}" : "NÃO ENCONTRADO")} ===");
+                       
                        if (usuarioExistente == null)
                        {
-                           // Extrair informações do usuário
-                           var name = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                           var givenName = context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-                           var surname = context.User.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-                           
                            // Criar novo usuário
                            var novoUsuario = new ReservaPeriferico.Application.DTOs.UsuarioDto
                            {
@@ -305,27 +313,42 @@ app.UseRouting();
                                DataCadastro = DateTime.Now
                            };
                            
+                           Console.WriteLine($"=== CRIANDO NOVO USUÁRIO: {novoUsuario.Nome} ({novoUsuario.Email}) ===");
+                           
                            var resultado = await usuarioService.CreateAsync(novoUsuario);
-                           Console.WriteLine($"=== USUÁRIO CRIADO AUTOMATICAMENTE COM ID: {resultado.Id} ===");
+                           Console.WriteLine($"=== ✅ USUÁRIO CRIADO AUTOMATICAMENTE COM ID: {resultado.Id} ===");
+                           
+                           // Salvar também no UserSessionService se ainda não foi salvo
+                           var userSessionService = context.RequestServices.GetRequiredService<UserSessionService>();
+                           userSessionService.SetUserInfo(resultado.Nome, resultado.Email);
+                           Console.WriteLine($"=== ✅ USUÁRIO SALVO NO SESSION SERVICE: {resultado.Nome} ({resultado.Email}) ===");
                        }
                        else
                        {
                            // Atualizar usuário existente
-                           var name = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                           var givenName = context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-                           var surname = context.User.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-                           
                            usuarioExistente.Nome = name ?? $"{givenName} {surname}".Trim();
                            usuarioExistente.Ativo = true;
                            
+                           Console.WriteLine($"=== ATUALIZANDO USUÁRIO EXISTENTE: {usuarioExistente.Nome} ({usuarioExistente.Email}) ===");
+                           
                            var resultado = await usuarioService.UpdateAsync(usuarioExistente.Id, usuarioExistente);
-                           Console.WriteLine($"=== USUÁRIO ATUALIZADO AUTOMATICAMENTE: {resultado.Id} ===");
+                           Console.WriteLine($"=== ✅ USUÁRIO ATUALIZADO AUTOMATICAMENTE: {resultado.Id} ===");
+                           
+                           // Salvar também no UserSessionService se ainda não foi salvo
+                           var userSessionService = context.RequestServices.GetRequiredService<UserSessionService>();
+                           userSessionService.SetUserInfo(resultado.Nome, resultado.Email);
+                           Console.WriteLine($"=== ✅ USUÁRIO SALVO NO SESSION SERVICE: {resultado.Nome} ({resultado.Email}) ===");
                        }
+                   }
+                   else
+                   {
+                       Console.WriteLine("=== ❌ EMAIL NÃO ENCONTRADO NOS CLAIMS ===");
                    }
                }
                catch (Exception ex)
                {
-                   Console.WriteLine($"Erro no middleware de usuário: {ex.Message}");
+                   Console.WriteLine($"=== ❌ ERRO NO MIDDLEWARE DE USUÁRIO: {ex.Message} ===");
+                   Console.WriteLine($"=== ❌ STACK TRACE: {ex.StackTrace} ===");
                }
            }
            
@@ -333,7 +356,7 @@ app.UseRouting();
        });
 
        // Mapear endpoints de autenticação
-       app.MapGet("/auth/google", async (HttpContext context) =>
+       app.MapGet("/auth/google", (HttpContext context) =>
        {
            var returnUrl = context.Request.Query["returnUrl"].FirstOrDefault() ?? "/dashboard";
            var prompt = context.Request.Query["prompt"].FirstOrDefault();
@@ -409,6 +432,32 @@ app.UseRouting();
            var fromEmail = await parametroService.GetParameterAsync(ParametroChave.EmailFromEmail);
            
            return Results.Ok(new { smtpServer, smtpPort, fromEmail });
+       });
+       
+       // Endpoint de teste para verificar usuários no banco
+       app.MapGet("/test/usuarios", async (IUsuarioService usuarioService) =>
+       {
+           try
+           {
+               var usuarios = await usuarioService.GetAllAsync();
+               var usuariosList = usuarios.Select(u => new { 
+                   Id = u.Id, 
+                   Nome = u.Nome, 
+                   Email = u.Email, 
+                   Matricula = u.Matricula,
+                   Ativo = u.Ativo,
+                   DataCadastro = u.DataCadastro
+               }).ToList();
+               
+               return Results.Ok(new { 
+                   TotalUsuarios = usuariosList.Count,
+                   Usuarios = usuariosList
+               });
+           }
+           catch (Exception ex)
+           {
+               return Results.Problem($"Erro ao buscar usuários: {ex.Message}");
+           }
        });
        
        // Endpoint para salvar usuário após autenticação Google
