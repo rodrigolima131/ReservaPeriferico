@@ -2,6 +2,8 @@ using ReservaPeriferico.Application.DTOs;
 using ReservaPeriferico.Application.Interfaces;
 using ReservaPeriferico.Core.Entities;
 using ReservaPeriferico.Core.Interfaces;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace ReservaPeriferico.Application.Services;
 
@@ -9,11 +11,13 @@ public class EquipeService : IEquipeService
 {
     private readonly IEquipeRepository _equipeRepository;
     private readonly IUsuarioEquipeRepository _usuarioEquipeRepository;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public EquipeService(IEquipeRepository equipeRepository, IUsuarioEquipeRepository usuarioEquipeRepository)
+    public EquipeService(IEquipeRepository equipeRepository, IUsuarioEquipeRepository usuarioEquipeRepository, IHttpContextAccessor httpContextAccessor)
     {
         _equipeRepository = equipeRepository;
         _usuarioEquipeRepository = usuarioEquipeRepository;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<EquipeDto?> GetByIdAsync(int id)
@@ -63,6 +67,26 @@ public class EquipeService : IEquipeService
         if (existingEquipe == null)
             throw new ArgumentException("Equipe não encontrada");
 
+        // ✅ VALIDAÇÃO DE SEGURANÇA - Obter usuário logado
+        var usuarioLogadoId = GetUsuarioLogadoId();
+        if (!usuarioLogadoId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Usuário não autenticado");
+        }
+
+        // ✅ VALIDAÇÃO DE SEGURANÇA - Verificar se é administrador da equipe
+        var isAdministrador = await _usuarioEquipeRepository.UsuarioIsAdministradorAsync(id, usuarioLogadoId.Value);
+        if (!isAdministrador)
+        {
+            throw new UnauthorizedAccessException("Usuário não tem permissão para editar esta equipe");
+        }
+
+        // ✅ VALIDAÇÃO DE SEGURANÇA - Verificar se é o administrador principal
+        if (existingEquipe.UsuarioAdministradorId != usuarioLogadoId.Value)
+        {
+            throw new UnauthorizedAccessException("Apenas o administrador principal pode editar esta equipe");
+        }
+
         var equipe = MapToEntity(equipeDto);
         equipe.Id = id;
         equipe.DataAtualizacao = DateTime.UtcNow;
@@ -89,6 +113,23 @@ public class EquipeService : IEquipeService
 
     public async Task DeleteAsync(int id)
     {
+        var existingEquipe = await _equipeRepository.GetByIdAsync(id);
+        if (existingEquipe == null)
+            throw new ArgumentException("Equipe não encontrada");
+
+        // ✅ VALIDAÇÃO DE SEGURANÇA - Obter usuário logado
+        var usuarioLogadoId = GetUsuarioLogadoId();
+        if (!usuarioLogadoId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Usuário não autenticado");
+        }
+
+        // ✅ VALIDAÇÃO DE SEGURANÇA - Verificar se é o administrador principal
+        if (existingEquipe.UsuarioAdministradorId != usuarioLogadoId.Value)
+        {
+            throw new UnauthorizedAccessException("Apenas o administrador principal pode excluir esta equipe");
+        }
+
         // Remover todos os membros primeiro
         var membros = await _usuarioEquipeRepository.GetByEquipeIdAsync(id);
         foreach (var membro in membros)
@@ -103,6 +144,38 @@ public class EquipeService : IEquipeService
     {
         var equipes = await _equipeRepository.GetAllAsync();
         return equipes.Where(e => e.Membros.Any(m => m.UsuarioId == usuarioId)).Select(MapToDto);
+    }
+
+    public async Task<bool> UsuarioIsAdministradorAsync(int equipeId, int usuarioId)
+    {
+        return await _usuarioEquipeRepository.UsuarioIsAdministradorAsync(equipeId, usuarioId);
+    }
+
+    private int? GetUsuarioLogadoId()
+    {
+        try
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                // Tentar obter o ID dos claims
+                var userIdClaim = user.FindFirst("UserId")?.Value ?? 
+                                user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+                {
+                    return userId;
+                }
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao obter ID do usuário logado: {ex.Message}");
+            return null;
+        }
     }
 
     private static EquipeDto MapToDto(Equipe equipe)

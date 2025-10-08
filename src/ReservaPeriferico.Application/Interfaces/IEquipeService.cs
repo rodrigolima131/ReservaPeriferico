@@ -11,5 +11,6 @@ namespace ReservaPeriferico.Application.Interfaces
         Task<EquipeDto> UpdateAsync(int id, EquipeDto equipeDto);
         Task DeleteAsync(int id);
         Task<IEnumerable<EquipeDto>> GetByUsuarioIdAsync(int usuarioId);
+        Task<bool> UsuarioIsAdministradorAsync(int equipeId, int usuarioId);
     }
 } 
