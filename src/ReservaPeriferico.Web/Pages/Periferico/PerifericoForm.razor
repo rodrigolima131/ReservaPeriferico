@@ -7,6 +7,7 @@
 @using ReservaPeriferico.Application.DTOs
 @using ReservaPeriferico.Core.Enums
 @inject IPerifericoService PerifericoService
+@inject IEquipeService EquipeService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
@@ -74,10 +75,21 @@
                         <MudTextField @bind-Value="editingPeriferico.Descricao" Label="Descrição" Lines="3" 
                                        Variant="Variant.Outlined" Title="Descrição detalhada do periférico (opcional)" />
                     </MudItem>
-                    <MudItem xs="12">
-                        <MudSwitch T="bool" @bind-Checked="editingPeriferico.Ativo" 
+                    <MudItem xs="12" sm="6">
+                        <MudSelect @bind-Value="editingPeriferico.EquipeId" Label="Equipe *" Required="true" 
+                                   Variant="Variant.Outlined" Validation="@(new Func<int, IEnumerable<string>>(ValidateEquipe))"
+                                   Title="Equipe responsável pelo periférico (obrigatório)">
+                            @foreach (var equipe in equipesDisponiveis)
+                            {
+                                <MudSelectItem Value="@equipe.Id">@equipe.Nome</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSwitch @bind-Value="editingPeriferico.Ativo" 
                                    Label="Periférico Ativo" Color="Color.Primary" 
-                                   Title="Define se o periférico está disponível para reservas" />
+                                   Disabled="true"
+                                   Title="Status do periférico (altere através do ícone na lista de periféricos)" />
                     </MudItem>
                 </MudGrid>
             </MudForm>
@@ -111,12 +123,26 @@
     public int? Id { get; set; }
 
     private PerifericoDto editingPeriferico = new();
+    private List<EquipeDto> equipesDisponiveis = new();
     private bool success;
     private MudForm form = default!;
 
     protected override async Task OnInitializedAsync()
     {
+        await CarregarEquipes();
         await CarregarPeriferico();
+    }
+
+    private async Task CarregarEquipes()
+    {
+        try
+        {
+            equipesDisponiveis = (await EquipeService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar equipes: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task CarregarPeriferico()
@@ -151,7 +177,7 @@
                     Modelo = "",
                     NumeroSerie = "",
                     Ativo = true,
-                    EquipeId = 1, // Equipe padrão (hardcoded por enquanto)
+                    EquipeId = equipesDisponiveis.FirstOrDefault()?.Id ?? 0, // Primeira equipe disponível ou 0
                     DataCadastro = DateTime.UtcNow,
                     DataAtualizacao = null
                 };
@@ -230,5 +256,11 @@
             yield return "Número de série é obrigatório";
         else if (numeroSerie.Length > 20)
             yield return "Número de série deve ter no máximo 20 caracteres";
+    }
+
+    private IEnumerable<string> ValidateEquipe(int equipeId)
+    {
+        if (equipeId <= 0)
+            yield return "Equipe é obrigatória";
     }
 } 

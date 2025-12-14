@@ -43,10 +43,15 @@
                     Atualizar
                 </MudButton>
             </MudItem>
-            <MudItem xs="12" sm="12" md="6">
+            <MudItem xs="12" sm="12" md="4">
                 <MudTextField @bind-Value="filtroNome" Label="Buscar por nome" Variant="Variant.Outlined" 
                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
-                             Immediate="true" OnBlur="LoadEquipes" Style="width: 100%; min-width: 250px;" />
+                             Immediate="true" OnBlur="LoadEquipes" FullWidth="true" />
+            </MudItem>
+            <MudItem xs="12" sm="12" md="2">
+                <MudCheckBox @bind-Value="filtroMinhasEquipes" Label="Minhas Equipes" 
+                            Color="Color.Primary" 
+                            OnCheckedChanged="OnFiltroMinhasEquipesChanged" />
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -54,41 +59,73 @@
     <MudPaper Class="pa-4 custom-card">
         <MudTable Items="@equipesFiltradas" Dense="true" Hover="true" Loading="@loading" 
                    Striped="true" Bordered="true" FixedHeader="true" Height="400px"
-                   Filter="new Func<EquipeDto,bool>(FilterFunc)" Class="mt-4">
+                   Filter="new Func<EquipeDto,bool>(FilterFunc)" Class="mt-4" Breakpoint="Breakpoint.Sm">
             <ToolBarContent>
                 <MudTextField @bind-Value="searchString" Placeholder="Buscar equipes..." 
                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" 
                              IconSize="Size.Medium" Class="mt-0" Variant="Variant.Outlined"
-                             Title="Buscar por nome ou descrição" Style="min-width: 300px;" />
+                             Title="Buscar por nome ou descrição" 
+                             Style="width: 100%; max-width: 100%;" />
                 <MudSpacer />
-                <MudText Typo="Typo.body2" Class="mr-2">
+                <MudText Typo="Typo.body2" Class="mr-2 d-none d-sm-inline">
                     Total: @equipesFiltradas.Count() equipes
                 </MudText>
             </ToolBarContent>
             <HeaderContent>
-                <MudTh Style="min-width: 150px;">Nome</MudTh>
-                <MudTh Style="min-width: 200px;">Descrição</MudTh>
-                <MudTh Style="min-width: 150px;">Administrador</MudTh>
-                <MudTh Style="min-width: 120px;">
+                <MudTh>Nome</MudTh>
+                <MudTh Class="d-none d-md-table-cell">Descrição</MudTh>
+                <MudTh>Administrador</MudTh>
+                <MudTh>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
                         <MudText Typo="Typo.body2" Class="font-weight-medium">Membros</MudText>
                     </MudStack>
                 </MudTh>
-                <MudTh Style="min-width: 120px;">Data Cadastro</MudTh>
-                <MudTh Style="min-width: 120px;">Ações</MudTh>
+                <MudTh>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Devices" Size="Size.Small" />
+                        <MudText Typo="Typo.body2" Class="font-weight-medium">Periféricos</MudText>
+                    </MudStack>
+                </MudTh>
+                <MudTh Class="d-none d-md-table-cell">Data Cadastro</MudTh>
+                <MudTh>Ações</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Nome">
-                    <MudText Typo="Typo.body1" Class="font-weight-medium">@context.Nome</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudText Typo="Typo.body1" Class="font-weight-medium">@context.Nome</MudText>
+                        @if (SouAdministrador(context.Id))
+                        {
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled" 
+                                     Class="custom-chip-success">
+                                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Small" Class="mr-1" />
+                                Sou Admin
+                            </MudChip>
+                        }
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(context.Descricao))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-sm-none">
+                            @(context.Descricao.Length > 40 ? context.Descricao.Substring(0, 40) + "..." : context.Descricao)
+                        </MudText>
+                    }
                 </MudTd>
-                <MudTd DataLabel="Descrição">
+                <MudTd DataLabel="Descrição" Class="d-none d-md-table-cell">
                     @if (!string.IsNullOrEmpty(context.Descricao))
                     {
                         var descricaoTruncada = context.Descricao.Length > 25 
                             ? context.Descricao.Substring(0, 25) + "..." 
                             : context.Descricao;
-                        <MudText Typo="Typo.body2" Title="@context.Descricao">@descricaoTruncada</MudText>
+                        @if (context.Descricao.Length > 25)
+                        {
+                            <MudTooltip Text="@context.Descricao">
+                                <MudText Typo="Typo.body2" Style="cursor: help;">@descricaoTruncada</MudText>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">@descricaoTruncada</MudText>
+                        }
                     }
                     else
                     {
@@ -111,7 +148,17 @@
                         </MudText>
                     </MudStack>
                 </MudTd>
-                <MudTd DataLabel="Data Cadastro">
+                <MudTd DataLabel="Periféricos">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="custom-chip-primary">
+                            @context.QuantidadePerifericos
+                        </MudChip>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @(context.QuantidadePerifericos == 1 ? "periférico" : "periféricos")
+                        </MudText>
+                    </MudStack>
+                </MudTd>
+                <MudTd DataLabel="Data Cadastro" Class="d-none d-md-table-cell">
                     <MudText Typo="Typo.caption">@context.DataCadastro.ToString("dd/MM/yyyy")</MudText>
                 </MudTd>
                 <MudTd DataLabel="Ações">
@@ -124,9 +171,11 @@
                         }
                         else
                         {
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" 
-                                           Disabled="true"
-                                           Size="Size.Small" Title="Apenas o administrador pode editar esta equipe" />
+                            <MudTooltip Text="Apenas o administrador pode editar esta equipe">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary" 
+                                               Disabled="true"
+                                               Size="Size.Small" />
+                            </MudTooltip>
                         }
                         <MudIconButton Icon="@Icons.Material.Filled.People" Color="Color.Info" 
                                        OnClick="@(() => VisualizarMembros(context))" 
@@ -139,9 +188,11 @@
                         }
                         else
                         {
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" 
-                                           Disabled="true"
-                                           Size="Size.Small" Title="Apenas o administrador pode excluir esta equipe" />
+                            <MudTooltip Text="Apenas o administrador pode excluir esta equipe">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" 
+                                               Disabled="true"
+                                               Size="Size.Small" />
+                            </MudTooltip>
                         }
                     </MudStack>
                 </MudTd>
@@ -158,6 +209,7 @@
     private bool loading = true;
     private string searchString = "";
     private string filtroNome = string.Empty;
+    private bool filtroMinhasEquipes = false;
     private Dictionary<int, UsuarioDto> usuariosCache = new();
     private Dictionary<int, bool> permissoesEdicao = new();
     private int? usuarioLogadoId = null;
@@ -243,6 +295,14 @@
         return permissoesEdicao.TryGetValue(equipeId, out var podeEditar) && podeEditar;
     }
 
+    private bool SouAdministrador(int equipeId)
+    {
+        if (!usuarioLogadoId.HasValue)
+            return false;
+        
+        return permissoesEdicao.TryGetValue(equipeId, out var isAdmin) && isAdmin;
+    }
+
     private void NovaEquipe()
     {
         Navigation.NavigateTo("/equipe/cadastro");
@@ -258,7 +318,7 @@
         var dialog = await DialogService.ShowMessageBox(
             "Confirmar exclusão",
             $"Deseja realmente excluir a equipe '{equipe.Nome}'?\n\n" +
-            "⚠️ <strong>Atenção:</strong> Esta ação não pode ser desfeita e todos os membros serão removidos da equipe.",
+            "⚠️ ATENÇÃO: Esta ação não pode ser desfeita e todos os membros serão removidos da equipe.",
             yesText: "Excluir",
             cancelText: "Cancelar",
             options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
@@ -289,6 +349,18 @@
 
     private bool FilterFunc(EquipeDto equipe)
     {
+        // Filtro "Minhas Equipes" - mostrar apenas equipes onde o usuário é membro ou administrador
+        if (filtroMinhasEquipes && usuarioLogadoId.HasValue)
+        {
+            var isMembro = equipe.MembrosIds.Contains(usuarioLogadoId.Value);
+            var isAdministrador = equipe.UsuarioAdministradorId == usuarioLogadoId.Value;
+            
+            if (!isMembro && !isAdministrador)
+            {
+                return false;
+            }
+        }
+
         // Filtro por texto de busca
         if (!string.IsNullOrWhiteSpace(searchString))
         {
@@ -310,5 +382,11 @@
         }
 
         return true;
+    }
+
+    private void OnFiltroMinhasEquipesChanged(bool? value)
+    {
+        filtroMinhasEquipes = value ?? false;
+        StateHasChanged();
     }
 } 

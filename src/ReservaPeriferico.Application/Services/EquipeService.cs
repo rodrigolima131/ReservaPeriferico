@@ -12,30 +12,59 @@ public class EquipeService : IEquipeService
     private readonly IEquipeRepository _equipeRepository;
     private readonly IUsuarioEquipeRepository _usuarioEquipeRepository;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IReservaRepository _reservaRepository;
+    private readonly IPerifericoRepository _perifericoRepository; // 🆕 TAREFA 7
 
-    public EquipeService(IEquipeRepository equipeRepository, IUsuarioEquipeRepository usuarioEquipeRepository, IHttpContextAccessor httpContextAccessor)
+    public EquipeService(IEquipeRepository equipeRepository, IUsuarioEquipeRepository usuarioEquipeRepository, IHttpContextAccessor httpContextAccessor, IReservaRepository reservaRepository, IPerifericoRepository perifericoRepository) // 🆕 TAREFA 7
     {
         _equipeRepository = equipeRepository;
         _usuarioEquipeRepository = usuarioEquipeRepository;
         _httpContextAccessor = httpContextAccessor;
+        _reservaRepository = reservaRepository;
+        _perifericoRepository = perifericoRepository; // 🆕 TAREFA 7
     }
 
     public async Task<EquipeDto?> GetByIdAsync(int id)
     {
         var equipe = await _equipeRepository.GetByIdAsync(id);
-        return equipe != null ? MapToDto(equipe) : null;
+        if (equipe == null)
+            return null;
+            
+        var dto = MapToDto(equipe);
+        // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+        var perifericos = await _perifericoRepository.GetByEquipeIdAsync(equipe.Id);
+        dto.QuantidadePerifericos = perifericos.Count();
+        return dto;
     }
 
     public async Task<IEnumerable<EquipeDto>> GetAllAsync()
     {
         var equipes = await _equipeRepository.GetAllAsync();
-        return equipes.Select(MapToDto);
+        var equipesDto = new List<EquipeDto>();
+        
+        foreach (var equipe in equipes)
+        {
+            var dto = MapToDto(equipe);
+            // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+            var perifericos = await _perifericoRepository.GetByEquipeIdAsync(equipe.Id);
+            dto.QuantidadePerifericos = perifericos.Count();
+            equipesDto.Add(dto);
+        }
+        
+        return equipesDto;
     }
 
     public async Task<EquipeDto?> GetByNomeAsync(string nome)
     {
         var equipe = await _equipeRepository.GetByNomeAsync(nome);
-        return equipe != null ? MapToDto(equipe) : null;
+        if (equipe == null)
+            return null;
+            
+        var dto = MapToDto(equipe);
+        // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+        var perifericos = await _perifericoRepository.GetByEquipeIdAsync(equipe.Id);
+        dto.QuantidadePerifericos = perifericos.Count();
+        return dto;
     }
 
     public async Task<EquipeDto> CreateAsync(EquipeDto equipeDto)
@@ -58,7 +87,11 @@ public class EquipeService : IEquipeService
             await _usuarioEquipeRepository.AddMembroAsync(createdEquipe.Id, membroId, false);
         }
 
-        return MapToDto(createdEquipe);
+        var dto = MapToDto(createdEquipe);
+        // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+        var perifericos = await _perifericoRepository.GetByEquipeIdAsync(createdEquipe.Id);
+        dto.QuantidadePerifericos = perifericos.Count();
+        return dto;
     }
 
     public async Task<EquipeDto> UpdateAsync(int id, EquipeDto equipeDto)
@@ -108,7 +141,11 @@ public class EquipeService : IEquipeService
             await _usuarioEquipeRepository.AddMembroAsync(id, membroId, false);
         }
 
-        return MapToDto(updatedEquipe);
+        var dto = MapToDto(updatedEquipe);
+        // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+        var perifericos = await _perifericoRepository.GetByEquipeIdAsync(updatedEquipe.Id);
+        dto.QuantidadePerifericos = perifericos.Count();
+        return dto;
     }
 
     public async Task DeleteAsync(int id)
@@ -130,6 +167,22 @@ public class EquipeService : IEquipeService
             throw new UnauthorizedAccessException("Apenas o administrador principal pode excluir esta equipe");
         }
 
+        // 🆕 VALIDAÇÃO DE RESERVAS - Verificar se equipe tem QUALQUER reserva vinculada
+        var todasReservas = await _reservaRepository.GetByEquipeAsync(id);
+
+        if (todasReservas.Any())
+        {
+            throw new InvalidOperationException("Não é possível excluir a equipe pois ela possui reservas vinculadas");
+        }
+
+        // 🆕 TAREFA 7 - VALIDAÇÃO DE PERIFÉRICOS - Verificar se equipe tem QUALQUER periférico vinculado
+        var todosPerifericos = await _perifericoRepository.GetByEquipeIdAsync(id);
+
+        if (todosPerifericos.Any())
+        {
+            throw new InvalidOperationException("Não é possível excluir a equipe pois ela possui periféricos cadastrados");
+        }
+
         // Remover todos os membros primeiro
         var membros = await _usuarioEquipeRepository.GetByEquipeIdAsync(id);
         foreach (var membro in membros)
@@ -143,7 +196,19 @@ public class EquipeService : IEquipeService
     public async Task<IEnumerable<EquipeDto>> GetByUsuarioIdAsync(int usuarioId)
     {
         var equipes = await _equipeRepository.GetAllAsync();
-        return equipes.Where(e => e.Membros.Any(m => m.UsuarioId == usuarioId)).Select(MapToDto);
+        var equipesFiltradas = equipes.Where(e => e.Membros.Any(m => m.UsuarioId == usuarioId));
+        var equipesDto = new List<EquipeDto>();
+        
+        foreach (var equipe in equipesFiltradas)
+        {
+            var dto = MapToDto(equipe);
+            // 🆕 TAREFA 12 - Calcular quantidade de periféricos
+            var perifericos = await _perifericoRepository.GetByEquipeIdAsync(equipe.Id);
+            dto.QuantidadePerifericos = perifericos.Count();
+            equipesDto.Add(dto);
+        }
+        
+        return equipesDto;
     }
 
     public async Task<bool> UsuarioIsAdministradorAsync(int equipeId, int usuarioId)
@@ -188,7 +253,8 @@ public class EquipeService : IEquipeService
             UsuarioAdministradorId = equipe.UsuarioAdministradorId,
             MembrosIds = equipe.Membros.Select(m => m.UsuarioId).ToList(),
             DataCadastro = equipe.DataCadastro,
-            DataAtualizacao = equipe.DataAtualizacao
+            DataAtualizacao = equipe.DataAtualizacao,
+            QuantidadePerifericos = 0 // Será calculado nos métodos que chamam MapToDto
         };
     }
 
