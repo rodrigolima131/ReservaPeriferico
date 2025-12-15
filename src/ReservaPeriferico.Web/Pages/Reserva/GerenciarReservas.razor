@@ -11,6 +11,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject UserInfoService UserInfoService
 
 <PageTitle>Gerenciar Reservas - Sistema de Reserva</PageTitle>
 
@@ -154,8 +155,15 @@
         carregando = true;
         try
         {
-            // Usuário padrão para testes (deve ser substituído pela autenticação real)
-            int usuarioId = 1;
+            // ✅ Obter ID do usuário logado através do UserInfoService
+            var usuarioId = UserInfoService.GetUserId();
+            if (!usuarioId.HasValue || usuarioId.Value <= 0)
+            {
+                Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                return;
+            }
+            
+            Console.WriteLine($"=== Carregando reservas para UsuarioId: {usuarioId.Value} ===");
             
             // Carregar reservas da equipe do usuário (deve ser implementado)
             // Por enquanto, carregar todas as reservas
@@ -207,10 +215,18 @@
                 NovoStatus = StatusReserva.Aprovada
             };
 
-            // Usuário padrão para testes (deve ser substituído pela autenticação real)
-            int usuarioAprovadorId = 1;
+            // ✅ Obter ID do usuário logado através do UserInfoService
+            var usuarioAprovadorId = UserInfoService.GetUserId();
+            if (!usuarioAprovadorId.HasValue || usuarioAprovadorId.Value <= 0)
+            {
+                Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                return;
+            }
+            
+            Console.WriteLine($"=== Aprovando reserva {reserva.Id} com UsuarioAprovadorId: {usuarioAprovadorId.Value} ===");
+            Console.WriteLine($"=== Reserva pertence à equipe: {reserva.EquipeId} ===");
 
-            await ReservaService.AprovarReservaAsync(reserva.Id, usuarioAprovadorId, aprovarDto);
+            await ReservaService.AprovarReservaAsync(reserva.Id, usuarioAprovadorId.Value, aprovarDto);
             Snackbar.Add("Reserva aprovada com sucesso!", Severity.Success);
             await CarregarReservas();
         }
@@ -246,10 +262,15 @@
                     Motivo = motivo
                 };
 
-                // Usuário padrão para testes (deve ser substituído pela autenticação real)
-                int usuarioAprovadorId = 1;
+                // ✅ Obter ID do usuário logado através do UserInfoService
+                var usuarioAprovadorId = UserInfoService.GetUserId();
+                if (!usuarioAprovadorId.HasValue || usuarioAprovadorId.Value <= 0)
+                {
+                    Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                    return;
+                }
 
-                await ReservaService.AprovarReservaAsync(reserva.Id, usuarioAprovadorId, aprovarDto);
+                await ReservaService.AprovarReservaAsync(reserva.Id, usuarioAprovadorId.Value, aprovarDto);
                 Snackbar.Add("Reserva rejeitada com sucesso!", Severity.Success);
                 await CarregarReservas();
             }
@@ -278,10 +299,15 @@
         {
             try
             {
-                // Usuário padrão para testes (deve ser substituído pela autenticação real)
-                int usuarioId = 1;
+                // ✅ Obter ID do usuário logado através do UserInfoService
+                var usuarioId = UserInfoService.GetUserId();
+                if (!usuarioId.HasValue || usuarioId.Value <= 0)
+                {
+                    Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                    return;
+                }
 
-                await ReservaService.CancelarReservaAsync(reserva.Id, usuarioId);
+                await ReservaService.CancelarReservaAsync(reserva.Id, usuarioId.Value);
                 Snackbar.Add("Reserva cancelada com sucesso!", Severity.Success);
                 await CarregarReservas();
             }

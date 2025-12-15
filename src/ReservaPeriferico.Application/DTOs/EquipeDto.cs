@@ -12,5 +12,6 @@ namespace ReservaPeriferico.Application.DTOs
         public List<int> MembrosIds { get; set; } = new();
         public DateTime DataCadastro { get; set; }
         public DateTime? DataAtualizacao { get; set; }
+        public int QuantidadePerifericos { get; set; } // 🆕 TAREFA 12
     }
 } 

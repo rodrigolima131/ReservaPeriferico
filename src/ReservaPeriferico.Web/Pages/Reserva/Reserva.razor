@@ -12,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject UserInfoService UserInfoService
 
 <PageTitle>Nova Reserva - Sistema de Reserva</PageTitle>
 
@@ -156,14 +157,28 @@
     {
         try
         {
+            // ✅ Obter ID do usuário logado
+            var usuarioId = UserInfoService.GetUserId();
+            if (!usuarioId.HasValue || usuarioId.Value <= 0)
+            {
+                Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                return;
+            }
+            
+            Console.WriteLine($"=== Carregando periféricos para UsuarioId: {usuarioId.Value} ===");
+            
             // Carregar apenas periféricos disponíveis (ativos e não reservados)
             var todosPerifericos = await PerifericoService.GetAllAsync();
             var reservasAtivas = await ReservaService.GetAtivasAsync();
             
             var perifericosReservados = reservasAtivas.Select(r => r.PerifericoId).ToList();
+            
+            // Mostrar periféricos ativos e não reservados
             perifericosDisponiveis = todosPerifericos
                 .Where(p => p.Ativo && !perifericosReservados.Contains(p.Id))
                 .ToList();
+            
+            Console.WriteLine($"=== Periféricos disponíveis: {perifericosDisponiveis.Count} ===");
         }
         catch (Exception ex)
         {
@@ -216,11 +231,18 @@
                 solicitarReserva.DataFim = dataFim.Value.Date;
             }
 
-            // Usuário padrão para testes (deve ser substituído pela autenticação real)
-            int usuarioId = 1;
+            // ✅ Obter ID do usuário logado através do UserInfoService
+            var usuarioId = UserInfoService.GetUserId();
+            if (!usuarioId.HasValue || usuarioId.Value <= 0)
+            {
+                Snackbar.Add("Erro: Usuário não autenticado", Severity.Error);
+                return;
+            }
+            
+            Console.WriteLine($"=== Criando reserva com UsuarioId: {usuarioId.Value} ===");
             
             // Persistir no banco
-            var reservaCriada = await ReservaService.SolicitarReservaAsync(usuarioId, solicitarReserva);
+            var reservaCriada = await ReservaService.SolicitarReservaAsync(usuarioId.Value, solicitarReserva);
             
             // Mensagem de sucesso
             Snackbar.Add($"Reserva solicitada com sucesso! ID: {reservaCriada.Id}", Severity.Success);

@@ -8,4 +8,5 @@ public interface IPerifericoRepository : IRepository<Periferico>
     Task<IEnumerable<Periferico>> GetAtivosAsync();
     Task<Periferico?> GetByNumeroSerieAsync(string numeroSerie);
     Task<bool> NumeroSerieExistsAsync(string numeroSerie, int? excludeId = null);
+    Task<IEnumerable<Periferico>> GetByEquipeIdAsync(int equipeId);
 } 

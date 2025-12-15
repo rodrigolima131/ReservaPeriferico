@@ -42,4 +42,11 @@ public class PerifericoRepository : Repository<Periferico>, IPerifericoRepositor
         
         return await query.AnyAsync();
     }
+
+    public async Task<IEnumerable<Periferico>> GetByEquipeIdAsync(int equipeId)
+    {
+        return await _dbSet
+            .Where(p => p.EquipeId == equipeId)
+            .ToListAsync();
+    }
 } 

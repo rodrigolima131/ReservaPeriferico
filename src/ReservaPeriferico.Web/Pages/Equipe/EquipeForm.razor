@@ -18,21 +18,21 @@
     <MudPaper Class="pa-4 custom-card">
         <MudStack>
             <!-- Cabeçalho -->
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="flex-column flex-sm-row">
                 <MudStack Row="true" AlignItems="AlignItems.Center">
                     <MudIcon Icon="@(editingEquipe?.Id > 0 ? Icons.Material.Filled.Edit : Icons.Material.Filled.GroupAdd)" 
                              Color="Color.Primary" Class="mr-2" />
                     <MudText Typo="Typo.h4">@(editingEquipe?.Id > 0 ? "Editar" : "Nova") Equipe</MudText>
                 </MudStack>
                 
-                <MudStack Row="true" Spacing="2">
+                <MudStack Row="true" Spacing="2" Class="mt-2 mt-sm-0 d-flex flex-column flex-sm-row">
                     <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
                                StartIcon="@Icons.Material.Filled.ArrowBack" 
-                               OnClick="VoltarParaLista" Class="custom-button-secondary">
+                               OnClick="VoltarParaLista" Class="custom-button-secondary w-100 w-sm-auto">
                         Voltar
                     </MudButton>
                     <MudButton Color="Color.Primary" OnClick="SalvarEquipe" Disabled="!success || !podeEditar" 
-                               Variant="Variant.Filled" Class="custom-button-primary"
+                               Variant="Variant.Filled" Class="custom-button-primary w-100 w-sm-auto"
                                StartIcon="@Icons.Material.Filled.Save">
                         Salvar
                     </MudButton>
@@ -95,19 +95,36 @@
                                 </MudAlert>
                             }
                         }
-                        <MudStack Row="true" Spacing="2">
-                            <MudSelect @bind-Value="novoMembroId" Label="Adicionar membro" Variant="Variant.Outlined" Style="min-width: 300px;" Disabled="!podeEditar">
-                                <MudSelectItem Value="0">Selecione um usuário</MudSelectItem>
-                                @foreach (var usuario in usuariosDisponiveis.Where(u => u.Id != editingEquipe.UsuarioAdministradorId))
-                                {
-                                    <MudSelectItem Value="@usuario.Id">@usuario.Nome (@usuario.Email)</MudSelectItem>
-                                }
-                            </MudSelect>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
-                                       OnClick="AdicionarMembro" Disabled="novoMembroId == 0 || !podeEditar">
-                                Adicionar
-                            </MudButton>
-                        </MudStack>
+                        <MudGrid>
+                            <MudItem xs="12" sm="8" md="9">
+                                <MudAutocomplete T="UsuarioDto" @bind-Value="novoMembroSelecionado" 
+                                                 Label="Adicionar membro" Variant="Variant.Outlined" 
+                                                 SearchFunc="BuscarUsuarios" 
+                                                 ToStringFunc="@(u => u != null ? $"{u.Nome} ({u.Email})" : string.Empty)"
+                                                 ResetValueOnEmptyText="true"
+                                                 Clearable="true"
+                                                 FullWidth="true" 
+                                                 Disabled="!podeEditar"
+                                                 Placeholder="Digite o nome ou email do usuário..."
+                                                 Adornment="Adornment.Start" 
+                                                 AdornmentIcon="@Icons.Material.Filled.Search"
+                                                 Title="Busque por nome ou email do usuário">
+                                    <ItemTemplate>
+                                        <MudStack>
+                                            <MudText Typo="Typo.body1">@context.Nome</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Email</MudText>
+                                        </MudStack>
+                                    </ItemTemplate>
+                                </MudAutocomplete>
+                            </MudItem>
+                            <MudItem xs="12" sm="4" md="3">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" 
+                                           OnClick="AdicionarMembro" Disabled="novoMembroSelecionado == null || !podeEditar"
+                                           FullWidth="true" StartIcon="@Icons.Material.Filled.Add">
+                                    Adicionar
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
                         
                         <!-- Campo hidden para detectar mudanças nos membros -->
                         <MudTextField @bind-Value="membrosHash" Style="display: none;" />
@@ -116,20 +133,23 @@
                         {
                             <MudPaper Class="pa-3 mt-3" Style="max-height: 200px; overflow-y: auto;">
                                 <MudTable Items="@membrosSelecionados" Dense="true" Hover="true" 
-                                         Striped="true" Bordered="true">
+                                         Striped="true" Bordered="true" Breakpoint="Breakpoint.Sm">
                                     <HeaderContent>
                                         <MudTh>Nome</MudTh>
-                                        <MudTh>Email</MudTh>
+                                        <MudTh Class="d-none d-md-table-cell">Email</MudTh>
                                         <MudTh Style="width: 60px;">Ações</MudTh>
                                     </HeaderContent>
                                     <RowTemplate>
                                         <MudTd DataLabel="Nome">
                                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                                 <MudAvatar Size="Size.Small" Color="Color.Primary">@context.Nome.Substring(0,1)</MudAvatar>
-                                                <MudText Class="ml-2">@context.Nome</MudText>
+                                                <MudStack>
+                                                    <MudText Class="ml-2">@context.Nome</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2 d-md-none">@context.Email</MudText>
+                                                </MudStack>
                                             </MudStack>
                                         </MudTd>
-                                        <MudTd DataLabel="Email">
+                                        <MudTd DataLabel="Email" Class="d-none d-md-table-cell">
                                             <MudText Typo="Typo.body2">@context.Email</MudText>
                                         </MudTd>
                                         <MudTd DataLabel="Ações">
@@ -183,7 +203,8 @@
     private EquipeDto editingEquipe = new();
     private List<UsuarioDto> usuariosDisponiveis = new();
     private List<UsuarioDto> membrosSelecionados = new();
-    private int novoMembroId = 0;
+    private int novoMembroId = 0; // Mantido para compatibilidade
+    private UsuarioDto? novoMembroSelecionado = null; // 🆕 TAREFA 14
     private bool success;
     private MudForm form = default!;
     private string membrosHash = string.Empty; // Campo hidden para detectar mudanças
@@ -193,6 +214,7 @@
     protected override async Task OnInitializedAsync()
     {
         await CarregarUsuarios();
+        await ObterUsuarioLogado(); // 🆕 Obter usuário logado antes de carregar equipe
         await CarregarEquipe();
         await VerificarPermissoes();
         
@@ -210,6 +232,40 @@
         {
             Snackbar.Add($"Erro ao carregar usuários: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task ObterUsuarioLogado()
+    {
+        try
+        {
+            // Obter o email do usuário logado
+            var emailUsuarioLogado = UserInfoService.GetUserEmail();
+            
+            if (string.IsNullOrEmpty(emailUsuarioLogado) || emailUsuarioLogado == "Não autenticado")
+            {
+                Console.WriteLine("⚠️ Usuário não autenticado ou email não encontrado");
+                return;
+            }
+
+            // Buscar o usuário no banco pelo email
+            var usuarioLogado = usuariosDisponiveis.FirstOrDefault(u => u.Email == emailUsuarioLogado);
+            
+            if (usuarioLogado != null)
+            {
+                usuarioLogadoId = usuarioLogado.Id;
+                Console.WriteLine($"✅ Usuário logado identificado: {usuarioLogado.Nome} (ID: {usuarioLogadoId})");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ Usuário com email '{emailUsuarioLogado}' não encontrado no banco de dados");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro ao obter usuário logado: {ex.Message}");
+        }
+        
+        await Task.CompletedTask;
     }
 
     private async Task VerificarPermissoes()
@@ -293,17 +349,28 @@
             }
             else
             {
-                // Modo novo - não definir administrador padrão
+                // Modo novo - pré-selecionar usuário logado como administrador
                 editingEquipe = new EquipeDto
                 {
                     Id = 0,
                     Nome = "",
                     Descricao = "",
-                    UsuarioAdministradorId = 0, // Será definido pelo usuário
+                    UsuarioAdministradorId = usuarioLogadoId ?? 0, // 🆕 Pré-selecionar usuário logado
                     MembrosIds = new List<int>(),
                     DataCadastro = DateTime.UtcNow,
                     DataAtualizacao = null
                 };
+                
+                // 🆕 Mostrar mensagem informativa se o usuário foi pré-selecionado
+                if (usuarioLogadoId.HasValue && usuarioLogadoId.Value > 0)
+                {
+                    var usuarioLogado = usuariosDisponiveis.FirstOrDefault(u => u.Id == usuarioLogadoId.Value);
+                    if (usuarioLogado != null)
+                    {
+                        Snackbar.Add($"Você ({usuarioLogado.Nome}) foi pré-selecionado como administrador da equipe.", Severity.Info);
+                    }
+                }
+                
                 membrosHash = string.Join(",", membrosSelecionados.Select(m => m.Id)); // Inicializar hash para novo
             }
         }
@@ -311,6 +378,26 @@
         {
             Snackbar.Add($"Erro ao carregar equipe: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task<IEnumerable<UsuarioDto>> BuscarUsuarios(string value, CancellationToken token)
+    {
+        // 🆕 TAREFA 14 - Buscar usuários por nome ou email
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return usuariosDisponiveis
+                .Where(u => u.Id != editingEquipe.UsuarioAdministradorId && 
+                           !membrosSelecionados.Any(m => m.Id == u.Id))
+                .Take(50); // Limitar resultados iniciais
+        }
+
+        var searchLower = value.ToLowerInvariant();
+        return usuariosDisponiveis
+            .Where(u => u.Id != editingEquipe.UsuarioAdministradorId && 
+                       !membrosSelecionados.Any(m => m.Id == u.Id) &&
+                       (u.Nome.ToLowerInvariant().Contains(searchLower) ||
+                        u.Email.ToLowerInvariant().Contains(searchLower)))
+            .Take(20); // Limitar resultados da busca
     }
 
     private async void AdicionarMembro()
@@ -321,16 +408,17 @@
             return;
         }
 
-        if (novoMembroId > 0)
+        // 🆕 TAREFA 14 - Usar novoMembroSelecionado do Autocomplete
+        if (novoMembroSelecionado != null)
         {
-            var usuario = usuariosDisponiveis.FirstOrDefault(u => u.Id == novoMembroId);
-            if (usuario != null && !membrosSelecionados.Any(m => m.Id == usuario.Id))
+            var usuario = novoMembroSelecionado;
+            if (!membrosSelecionados.Any(m => m.Id == usuario.Id))
             {
                 // Verificar se não está tentando adicionar o administrador como membro
                 if (usuario.Id == editingEquipe.UsuarioAdministradorId)
                 {
                     Snackbar.Add("O administrador já é automaticamente membro da equipe!", Severity.Warning);
-                    novoMembroId = 0;
+                    novoMembroSelecionado = null;
                     return;
                 }
 
@@ -341,8 +429,14 @@
                 // Forçar a validação do formulário para detectar mudanças
                 await form.Validate();
                 StateHasChanged(); // Força a atualização da UI
+                
+                Snackbar.Add($"'{usuario.Nome}' adicionado à equipe com sucesso!", Severity.Success);
             }
-            novoMembroId = 0;
+            else
+            {
+                Snackbar.Add("Este usuário já é membro da equipe!", Severity.Warning);
+            }
+            novoMembroSelecionado = null; // Limpar seleção
         }
     }
 
@@ -365,11 +459,12 @@
             }
 
             var dialog = await DialogService.ShowMessageBox(
-                "Confirmar remoção",
-                $"Deseja realmente remover '{membro.Nome}' da equipe?",
+                "Confirmar remoção de membro",
+                $"Deseja realmente remover o membro '{membro.Nome}' ({membro.Email}) da equipe?\n\n" +
+                "⚠️ ATENÇÃO: Esta ação pode ser revertida adicionando o membro novamente.",
                 yesText: "Remover",
                 cancelText: "Cancelar",
-                options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall }
+                options: new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small }
             );
 
             if (dialog == true)
